@@ -10,7 +10,7 @@ ASMS=spi.s bankasm.s
 all: ${PGMS}
 
 clean: FORCE
-	-rm ${PGMS} ${OBJS}
+	-rm ${PGMS} ${OBJS} 2>/dev/null
 
 ${OBJS}: ff.h ffconf.h diskio.h
 

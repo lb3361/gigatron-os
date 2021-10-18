@@ -15,7 +15,12 @@
 /* Blank using videotop */
 #define BLANK_WITH_VIDEOTOP 1
 /* Blank with mode 3 */
-#define BLANK_WITH_MODE3 0
+#define BLANK_WITH_MODE3 2
+
+
+#if _GLCC_VER < 103024
+# error This program requires a more recent version of GLCC.
+#endif
 
 
 //char *cbuf = (char*)0x8100u;  /* a 255 character string */
@@ -30,7 +35,7 @@ void videoTopReset(void)
 #if BLANK_WITH_VIDEOTOP
   videoTop_v5 = 0;
 #elif BLANK_WITH_MODE3
-  SYS_SetMode(1);
+  SYS_SetMode(BLANK_WITH_MODE3);
 #endif
 }
 
