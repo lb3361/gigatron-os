@@ -5,7 +5,7 @@ LDFLAGS=-map=64k,./system.ovl
 PGMS=system.gt1
 
 OBJS=main.o diskio.o ff.o codepage.o bank.o console.o loader.o
-ASMS=spi.s bankasm.s
+ASMS=spi.s bankasm.s loaderasm.s
 
 all: ${PGMS}
 

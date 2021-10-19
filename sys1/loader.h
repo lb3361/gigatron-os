@@ -4,4 +4,6 @@
 
 extern FRESULT load_gt1(const char *s, int exec);
 
+extern void _exec_pgm(void *ramaddr);
+
 #endif
