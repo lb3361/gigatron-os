@@ -208,7 +208,7 @@ int getbtn(void)
   } else if (frameCount == fcnt) {
     /* Autorepeat up and down arrows */
     if (last == 0xfb || last == 0xf7)
-      last = -1;
+      last = 0xff;
   }
   return -1;
 }
