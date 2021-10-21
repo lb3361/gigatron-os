@@ -107,7 +107,8 @@ void dir(void)
     strcpy(fk + 1, info.fname);
     if (info.fattrib & AM_DIR)
       *fk = '/';
-    else if (!strcmp(info.fname+l-4, ".gt1"))
+    else if (l - 4 > 0 && fk[l-3]=='.' && (fk[l-2]|0x20)=='g'
+             && (fk[l-1]|0x20)=='t' && (fk[l]|0x20)=='1' )
       *fk = '*';
     k += 1;
   }
