@@ -116,18 +116,6 @@ void dir(void)
   nfiles = k;
 }
 
-int getkey(void)
-{
-  static char last = 0xff;
-  register char ch = serialRaw;
-  if (last != ch) {
-    last = ch;
-    if (ch != 255)
-      return ch;
-  }
-  return -1;
-}
-
 void prline(int fgbg, int y, const char *s)
 {
   console_state.fgbg = fgbg;
@@ -205,6 +193,24 @@ void dispfile(register int i, register int sel, register const char *s)
   console_state.fgbg = CONSOLE_DEFAULT_FGBG;
 }
 
+int getbtn(void)
+{
+  register char ch = buttonState;
+  static char fcnt;
+  static char last;
+  if (last != ch) {
+    last = ch;
+    fcnt = frameCount + 12;
+    if (ch != 255)
+      return ch;
+  } else if (frameCount == fcnt) {
+    /* Autorepeat up and down arrows */
+    if (last == 0xfb || last == 0xf7)
+      last = -1;
+  }
+  return -1;
+}
+
 action_t browse(register int offset, register int selected)
 {
   register int n, fresh1, fresh2;
@@ -237,7 +243,7 @@ action_t browse(register int offset, register int selected)
         fresh1 = fresh2 = 0;
       }
       n = console_info.nlines - 1;
-      switch(getkey())
+      switch(getbtn())
         {
         case 0x1b:
         case buttonB ^ 0xff:
