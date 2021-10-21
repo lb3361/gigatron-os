@@ -81,7 +81,7 @@ void dir(void)
   register int l;
   register int k = 0;
   register char **f = files;
-  register char *fk;
+  register char *fk = 0;
   register FRESULT res;
   DIR dir;
   FILINFO info;
@@ -90,10 +90,12 @@ void dir(void)
     freefiles();
   if ((res = f_opendir(&dir,cbuf)) != FR_OK)
     faterr(res);
-  if (cbuf[0]) {
-    f[0] = fk = safe_malloc(4);
-    strcpy(fk, "...");
-    k += 1;
+  if (cbuf[0])
+    fk = "...";
+  if (fk) {
+    f[0] = safe_malloc(strlen(fk)+1);
+    strcpy(f[0], fk);
+    k++;
   }
   for(;;) {
     if (k > MAXFILES)
@@ -250,6 +252,8 @@ action_t browse(register int offset, register int selected)
         case buttonLeft ^ 0xff:
           /**** Go to parent dir */
           return action("...");
+        case 'Q':
+          exit(0);
         case '\n':
         case buttonA ^ 0xff:
         case buttonRight ^ 0xff:
