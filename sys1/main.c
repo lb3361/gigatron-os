@@ -22,10 +22,7 @@
 # error This program requires a more recent version of GLCC.
 #endif
 
-
-//char *cbuf = (char*)0x8100u;  /* a 255 character string */
 char cbuf[256];
-
 int nfiles;
 char *files[MAXFILES];
 FATFS fatfs;
@@ -70,7 +67,7 @@ void freefiles(void)
 {
   register int i;
   register char **f = files;
-  for (i=0; i<MAXFILES; i++)
+  for (i = 0; i != MAXFILES; i++)
     free(f[i]);
   memset(f, 0, sizeof(files));
   nfiles = 0;
@@ -88,7 +85,7 @@ void dir(void)
 
   if (nfiles)
     freefiles();
-  if ((res = f_opendir(&dir,cbuf)) != FR_OK)
+  if ((res = f_opendir(&dir, cbuf)) != FR_OK)
     faterr(res);
   if (cbuf[0])
     fk = "...";
@@ -148,7 +145,7 @@ action_t action(register const char *s)
   register int t = 0;
   register int l = strlen(s);
   register int r = strlen(cbuf);
-  if (l + r - 255 > 0)
+  if (l + r - (int)sizeof(cbuf) >= 0)
     return A_NONE;
 
   if (s[0] == '.') {
@@ -358,7 +355,7 @@ int main()
 
   /* Go */
   freefiles();
-  if ((res = load_gt1(cbuf, 1)) == FR_INT_ERR)
+  if ((res = load_gt1(cbuf)) == FR_INT_ERR)
     _exitm(EXIT_FAILURE, "Corrupted GT1");
   if (res != FR_OK)
     faterr(res);

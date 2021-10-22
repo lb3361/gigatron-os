@@ -14,92 +14,108 @@ extern void videoTopReset(void);
 extern void videoTopBlank(void);
 
 
-static BYTE *addr = 0;
-static UINT len = 0;
+
+
+static BYTE *load_gt1_addr;
+static UINT load_gt1_len;
 
 static UINT load_gt1_stream(register const BYTE *p, register UINT n)
 {
+  register BYTE *addr = load_gt1_addr;
+  register UINT len = load_gt1_len;
   if (n == 0)
     return len > 0;
-  if (n > len)
-    n = len;
-  if (*((char*)&addr + 1))
+  if ((int)addr < 0) {
     _memcpyext(0x70, addr, p, n);
-  else
-    memcpy(addr + 0x8000u, p, n); /* Page zero mirrored in 0x8000 */
-  addr += n;
-  len -= n;
+  } else if ((int)addr - 255 <= 0) {
+    memcpy(addr + 0x8000u, p, n);
+  } else {
+    memcpy(addr, p, n);
+  }
+  load_gt1_addr += n;
+  load_gt1_len -= n;
   return n;
 }
 
-FRESULT load_gt1(register const char *s, register int exec)
+static BYTE load_gt1_channelmask;
+
+static void prep(const char *buf)
+{
+  register int len;
+  register int b0 = buf[0];
+  register int b1 = buf[1];
+  if (!(len = buf[2]))
+    len = 256;
+  load_gt1_len = len;
+  load_gt1_addr = (BYTE*)((b0 << 8) + b1);
+  if (b0 - 4 <= 0 && b0 - 2 >= 0) {
+    if (b0 == 3)
+      mainmenuptr = 0;
+    if (b1 + len >= 0xfa) {
+      if (b1 == 2)
+        load_gt1_channelmask = 0;
+      else
+        load_gt1_channelmask &= 1;
+    }
+  }
+}
+
+
+FRESULT load_gt1(const char *s)
 {
   register FIL *fp = 0;
   register FRESULT res;
+  register int segments = 0;
   UINT br;
   char buf[4];
-  register char mask = channelMask_v4 | 0x3;
-  register char initial = 1;
-  register void *execaddr = 0;
+  void *execaddr = 0;
 
+  /* blank screen for speed */
   videoTopBlank();
-  memcpy((void*)0x8030, (void*)0x0030, 0x100-0x30);
   
-  /* mask channels for pages 2 3 4 */
-  channelMask_v4 &= 0xf8;
+  /* prepare zero page mirror */
+  memcpy((void*)0x8030, (void*)0x0030, 0x100-0x30);
+
+  /* prepare globals */
+  load_gt1_channelmask = 0x3;
+  channelMask_v4 &= 0xfc;
 
   /* allocate buffer */
   fp = safe_malloc(sizeof(FIL));
 
-  /* Open file */
+  /* open file */
   if ((res = f_open(fp, s, FA_READ)) != FR_OK)
     goto error;
   
-  /* Parse GT1 */
+  /* parse */
   for(;;) {
     if ((res = f_read(fp, buf, 3, &br)) != FR_OK)
       goto error;
     res = FR_INT_ERR;
     if (br < 3)
       goto error;
-    if (buf[0] == 0 && !initial)
+    if (buf[0] == 0 && segments > 0)
       break;
-    initial = 0;
-    addr = (BYTE*)((buf[0] << 8) + buf[1]);
-    if (! (len = buf[2]))
-      len = 256;
-    /* writing to pages 1,2,3,4 */
-    switch(buf[0]) {
-    case 2:
-      if (len + buf[1] >= 0xfa)
-        mask &= 0xf8;
-      break;
-    case 3:
-      mainmenuptr = 0;
-    case 4:
-      if (len + buf[1] >= 0xfa)
-        mask &= 0xf9;
-      break;
-    }
-    /* process the segment */
-    if ((res = f_forward(fp, load_gt1_stream, len, &br)) != FR_OK)
+    segments++;
+    prep(buf);
+    if ((res = f_forward(fp, load_gt1_stream, load_gt1_len, &br)) != FR_OK)
       goto error;
     res = FR_INT_ERR;
-    if (len != 0)
+    if (load_gt1_len != 0)
       goto error;
   }
-  /* All went well */
+
+  /* execute */
   f_close(fp);
   free(fp);
-  execaddr = (void*)((buf[1] << 8) + buf[2]);
-  channelMask_v4 = mask;
+  channelMask_v4 |= load_gt1_channelmask;
   videoTopReset();
-  if (exec && execaddr)
-    _exec_pgm(execaddr);
+  _exec_pgm((void*)((buf[1] << 8) + buf[2]));
   return FR_OK;
-  /* Error */
+
+  /* error */
  error:
-  channelMask_v4 = mask | 0x3;
+  channelMask_v4 |= 0x3;
   free(fp);
   return res;
 }
