@@ -23,6 +23,35 @@
 #include "diskio.h"		/* Declarations of device I/O functions */
 
 
+#ifdef __gigatron__
+# if FF_LFN_UNICODE != 0
+#  error FF_LFN_UNICODE must be 0 on the gigatron
+# endif
+# if FF_CODE_PAGE != 101
+#  error FF_CODE_PAGE must be 101 on the gigatron
+# endif
+# include <string.h>
+# include <ctype.h>
+
+extern WORD _ld_word(const BYTE *ptr);
+extern DWORD _ld_dword(const BYTE *ptr);
+static WORD _ff_wtoupper(WORD c) { if (c>='a' && c<='z') return c-0x20; return c; }
+
+# define ff_wtoupper(c)      _ff_wtoupper(c)
+# define ff_uni2oem(w,cp)    (((unsigned)w < 0x80) ? w : 0)
+# define ff_oem2uni(c,cp)    (c)
+# define ld_word(p)         _ld_word(p)
+# define ld_dword(p)        _ld_dword(p)
+# define mem_cpy(d,s,c)     memcpy(d,s,c)
+# define mem_set(d,v,c)     memset(d,v,c)
+# define mem_cmp(d,s,c)     memcmp(d,s,c)
+# define chk_chr(s,c)       ((int)!!strchr(s,c))
+# define dbc_1st(c)         (0)
+# define dbc_2nd(c)         (0)
+# define tchar2uni(pp)      (*(*(TCHAR**)(pp))++)
+# define put_utf(c,b,sz)    (((c)<0x80 && (sz)>=1) ? (*(b)=(c)), 1 : 0)
+#endif
+
 /*--------------------------------------------------------------------------
 
    Module Private Definitions
@@ -259,6 +288,13 @@
 #define SS(fs)	((UINT)FF_MAX_SS)	/* Fixed sector size */
 #else
 #define SS(fs)	((fs)->ssize)	/* Variable sector size */
+#endif
+#if FF_MAX_SS == 512 && FF_MIN_SS == 512
+# define divSS(fs)  >> 9
+# define modSS(fs)  & 0x1ff
+#else
+# define divSS(fs)  / SS(fs)
+# define modSS(fs)  % SS(fs)
 #endif
 
 
@@ -610,6 +646,7 @@ static const BYTE ExCvt[] = MKCVTBL(TBL_CT, FF_CODE_PAGE);
 /* Load/Store multi-byte word in the FAT structure                       */
 /*-----------------------------------------------------------------------*/
 
+#ifndef ld_word
 static WORD ld_word (const BYTE* ptr)	/*	 Load a 2-byte little-endian word */
 {
 	WORD rv;
@@ -618,7 +655,9 @@ static WORD ld_word (const BYTE* ptr)	/*	 Load a 2-byte little-endian word */
 	rv = rv << 8 | ptr[0];
 	return rv;
 }
+#endif
 
+#ifndef ld_dword
 static DWORD ld_dword (const BYTE* ptr)	/* Load a 4-byte little-endian word */
 {
 	DWORD rv;
@@ -629,6 +668,7 @@ static DWORD ld_dword (const BYTE* ptr)	/* Load a 4-byte little-endian word */
 	rv = rv << 8 | ptr[0];
 	return rv;
 }
+#endif
 
 #if FF_FS_EXFAT
 static QWORD ld_qword (const BYTE* ptr)	/* Load an 8-byte little-endian word */
@@ -684,6 +724,7 @@ static void st_qword (BYTE* ptr, QWORD val)	/* Store an 8-byte word in little-en
 /*-----------------------------------------------------------------------*/
 
 /* Copy memory to memory */
+#ifndef mem_cpy
 static void mem_cpy (void* dst, const void* src, UINT cnt)
 {
 	BYTE *d = (BYTE*)dst;
@@ -695,9 +736,10 @@ static void mem_cpy (void* dst, const void* src, UINT cnt)
 		} while (--cnt);
 	}
 }
-
+#endif
 
 /* Fill memory block */
+#ifndef mem_set
 static void mem_set (void* dst, int val, UINT cnt)
 {
 	BYTE *d = (BYTE*)dst;
@@ -706,9 +748,10 @@ static void mem_set (void* dst, int val, UINT cnt)
 		*d++ = (BYTE)val;
 	} while (--cnt);
 }
-
+#endif
 
 /* Compare memory block */
+#ifndef mem_cmp
 static int mem_cmp (const void* dst, const void* src, UINT cnt)	/* ZR:same, NZ:different */
 {
 	const BYTE *d = (const BYTE *)dst, *s = (const BYTE *)src;
@@ -720,17 +763,19 @@ static int mem_cmp (const void* dst, const void* src, UINT cnt)	/* ZR:same, NZ:d
 
 	return r;
 }
-
+#endif
 
 /* Check if chr is contained in the string */
+#ifndef chk_chr
 static int chk_chr (const char* str, int chr)	/* NZ:contained, ZR:not contained */
 {
 	while (*str && *str != chr) str++;
 	return *str;
 }
-
+#endif
 
 /* Test if the byte is DBC 1st byte */
+#ifndef dbc_1st
 static int dbc_1st (BYTE c)
 {
 #if FF_CODE_PAGE == 0		/* Variable code page */
@@ -748,9 +793,10 @@ static int dbc_1st (BYTE c)
 #endif
 	return 0;
 }
-
+#endif
 
 /* Test if the byte is DBC 2nd byte */
+#ifndef dbc_2nd
 static int dbc_2nd (BYTE c)
 {
 #if FF_CODE_PAGE == 0		/* Variable code page */
@@ -770,11 +816,12 @@ static int dbc_2nd (BYTE c)
 #endif
 	return 0;
 }
-
+#endif
 
 #if FF_USE_LFN
 
 /* Get a Unicode code point from the TCHAR string in defined API encodeing */
+#ifndef tchar2uni
 static DWORD tchar2uni (	/* Returns a character in UTF-16 encoding (>=0x10000 on surrogate pair, 0xFFFFFFFF on decode error) */
 	const TCHAR** str		/* Pointer to pointer to TCHAR string in configured encoding */
 )
@@ -847,9 +894,10 @@ static DWORD tchar2uni (	/* Returns a character in UTF-16 encoding (>=0x10000 on
 	*str = p;	/* Next read pointer */
 	return uc;
 }
-
+#endif
 
 /* Output a TCHAR string in defined API encoding */
+#ifndef put_utf
 static BYTE put_utf (	/* Returns number of encoding units written (0:buffer overflow or wrong encoding) */
 	DWORD chr,	/* UTF-16 encoded character (Surrogate pair if >=0x10000) */
 	TCHAR* buf,	/* Output buffer */
@@ -932,6 +980,7 @@ static BYTE put_utf (	/* Returns number of encoding units written (0:buffer over
 	return 1;
 #endif
 }
+#endif
 #endif	/* FF_USE_LFN */
 
 
@@ -1199,21 +1248,21 @@ static DWORD get_fat (		/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFF
 		switch (fs->fs_type) {
 		case FS_FAT12 :
 			bc = (UINT)clst; bc += bc / 2;
-			if (move_window(fs, fs->fatbase + (bc / SS(fs))) != FR_OK) break;
-			wc = fs->win[bc++ % SS(fs)];		/* Get 1st byte of the entry */
-			if (move_window(fs, fs->fatbase + (bc / SS(fs))) != FR_OK) break;
-			wc |= fs->win[bc % SS(fs)] << 8;	/* Merge 2nd byte of the entry */
+			if (move_window(fs, fs->fatbase + (bc divSS(fs))) != FR_OK) break;
+			wc = fs->win[bc++ modSS(fs)];		/* Get 1st byte of the entry */
+			if (move_window(fs, fs->fatbase + (bc divSS(fs))) != FR_OK) break;
+			wc |= fs->win[bc modSS(fs)] << 8;	/* Merge 2nd byte of the entry */
 			val = (clst & 1) ? (wc >> 4) : (wc & 0xFFF);	/* Adjust bit position */
 			break;
 
 		case FS_FAT16 :
-			if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 2))) != FR_OK) break;
-			val = ld_word(fs->win + clst * 2 % SS(fs));		/* Simple WORD array */
+			if (move_window(fs, fs->fatbase + ((clst * 2) divSS(fs))) != FR_OK) break;
+			val = ld_word(fs->win + ((clst * 2) modSS(fs)));		/* Simple WORD array */
 			break;
 
 		case FS_FAT32 :
-			if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 4))) != FR_OK) break;
-			val = ld_dword(fs->win + clst * 4 % SS(fs)) & 0x0FFFFFFF;	/* Simple DWORD array but mask out upper 4 bits */
+			if (move_window(fs, fs->fatbase + ((clst * 4) divSS(fs))) != FR_OK) break;
+			val = ld_dword(fs->win + ((clst * 4) modSS(fs))) & 0x0FFFFFFF;	/* Simple DWORD array but mask out upper 4 bits */
 			break;
 #if FF_FS_EXFAT
 		case FS_EXFAT :
@@ -1723,19 +1772,24 @@ static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
 	DWORD csz, clst;
 	FATFS *fs = dp->obj.fs;
 
-
-	if (ofs >= (DWORD)((FF_FS_EXFAT && fs->fs_type == FS_EXFAT) ? MAX_DIR_EX : MAX_DIR) || ofs % SZDIRE) {	/* Check range of offset and alignment */
+#if FF_FS_EXFAT
+	if (ofs >= (DWORD)((FF_FS_EXFAT && fs->fs_type == FS_EXFAT) ? MAX_DIR_EX : MAX_DIR) || ofs % SZDIRE) 	/* Check range of offset and alignment */
 		return FR_INT_ERR;
-	}
+#else
+	if (ofs >= (DWORD)MAX_DIR || (ofs & SZDIRE-1)) 	/* Check range of offset and alignment */
+		return FR_INT_ERR;
+#endif
 	dp->dptr = ofs;				/* Set current offset */
 	clst = dp->obj.sclust;		/* Table start cluster (0:root) */
 	if (clst == 0 && fs->fs_type >= FS_FAT32) {	/* Replace cluster# 0 with root cluster# */
 		clst = (DWORD)fs->dirbase;
+#if FF_FS_EXFAT
 		if (FF_FS_EXFAT) dp->obj.stat = 0;	/* exFAT: Root dir has an FAT chain */
+#endif
 	}
 
 	if (clst == 0) {	/* Static table (root-directory on the FAT volume) */
-		if (ofs / SZDIRE >= fs->n_rootdir) return FR_INT_ERR;	/* Is index out of range? */
+		if (ofs >= fs->n_rootdir * SZDIRE) return FR_INT_ERR;	/* Is index out of range? */
 		dp->sect = fs->dirbase;
 
 	} else {			/* Dynamic table (sub-directory or root-directory on the FAT32/exFAT volume) */
@@ -1750,9 +1804,8 @@ static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
 	}
 	dp->clust = clst;					/* Current cluster# */
 	if (dp->sect == 0) return FR_INT_ERR;
-	dp->sect += ofs / SS(fs);			/* Sector# of the directory entry */
-	dp->dir = fs->win + (ofs % SS(fs));	/* Pointer to the entry in the win[] */
-
+	dp->sect += ofs divSS(fs);			/* Sector# of the directory entry */
+	dp->dir = fs->win + (ofs modSS(fs));	/* Pointer to the entry in the win[] */
 	return FR_OK;
 }
 
@@ -1776,16 +1829,16 @@ static FRESULT dir_next (	/* FR_OK(0):succeeded, FR_NO_FILE:End of table, FR_DEN
 	if (ofs >= (DWORD)((FF_FS_EXFAT && fs->fs_type == FS_EXFAT) ? MAX_DIR_EX : MAX_DIR)) dp->sect = 0;	/* Disable it if the offset reached the max value */
 	if (dp->sect == 0) return FR_NO_FILE;	/* Report EOT if it has been disabled */
 
-	if (ofs % SS(fs) == 0) {	/* Sector changed? */
+	if ((ofs modSS(fs)) == 0) {	/* Sector changed? */
 		dp->sect++;				/* Next sector */
 
 		if (dp->clust == 0) {	/* Static table */
-			if (ofs / SZDIRE >= fs->n_rootdir) {	/* Report EOT if it reached end of static table */
+			if (ofs >= fs->n_rootdir * SZDIRE) {	/* Report EOT if it reached end of static table */
 				dp->sect = 0; return FR_NO_FILE;
 			}
 		}
 		else {					/* Dynamic table */
-			if ((ofs / SS(fs) & (fs->csize - 1)) == 0) {	/* Cluster changed? */
+			if (((ofs divSS(fs)) & (fs->csize - 1)) == 0) {	/* Cluster changed? */
 				clst = get_fat(&dp->obj, dp->clust);		/* Get next cluster */
 				if (clst <= 1) return FR_INT_ERR;			/* Internal error */
 				if (clst == 0xFFFFFFFF) return FR_DISK_ERR;	/* Disk error */
@@ -2707,15 +2760,21 @@ static void get_fileinfo (
 			si = di = hs = 0;
 			while (fs->lfnbuf[si] != 0) {
 				wc = fs->lfnbuf[si++];		/* Get an LFN character (UTF-16) */
+#if FF_CODE_PAGE == 101
+				wc = put_utf(wc, &fno->fname[di], FF_LFN_BUF - di);	/* Store it in API encoding */
+#else
 				if (hs == 0 && IsSurrogate(wc)) {	/* Is it a surrogate? */
 					hs = wc; continue;		/* Get low surrogate */
 				}
 				wc = put_utf((DWORD)hs << 16 | wc, &fno->fname[di], FF_LFN_BUF - di);	/* Store it in UTF-16 or UTF-8 encoding */
+#endif
 				if (wc == 0) { di = 0; break; }	/* Invalid char or buffer overflow? */
 				di += wc;
 				hs = 0;
 			}
+#if FF_CODE_PAGE != 101
 			if (hs != 0) di = 0;	/* Broken surrogate pair? */
+#endif
 			fno->fname[di] = 0;		/* Terminate the LFN (null string means LFN is invalid) */
 		}
 	}
@@ -3572,7 +3631,7 @@ static FRESULT mount_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 			szbfat = (fmt == FS_FAT16) ?				/* (Needed FAT size) */
 				fs->n_fatent * 2 : fs->n_fatent * 3 / 2 + (fs->n_fatent & 1);
 		}
-		if (fs->fsize < (szbfat + (SS(fs) - 1)) / SS(fs)) return FR_NO_FILESYSTEM;	/* (BPB_FATSz must not be less than the size needed) */
+		if (fs->fsize < ((szbfat + (SS(fs) - 1)) divSS(fs))) return FR_NO_FILESYSTEM;	/* (BPB_FATSz must not be less than the size needed) */
 
 #if !FF_FS_READONLY
 		/* Get FSInfo if available */
@@ -3880,12 +3939,12 @@ FRESULT f_open (
 					if (clst == 0xFFFFFFFF) res = FR_DISK_ERR;
 				}
 				fp->clust = clst;
-				if (res == FR_OK && ofs % SS(fs)) {	/* Fill sector buffer if not on the sector boundary */
+				if (res == FR_OK && (ofs modSS(fs))) {	/* Fill sector buffer if not on the sector boundary */
 					sc = clst2sect(fs, clst);
 					if (sc == 0) {
 						res = FR_INT_ERR;
 					} else {
-						fp->sect = sc + (DWORD)(ofs / SS(fs));
+						fp->sect = sc + (DWORD)(ofs divSS(fs));
 #if !FF_FS_TINY
 						if (disk_read(fs->pdrv, fp->buf, fp->sect, 1) != RES_OK) res = FR_DISK_ERR;
 #endif
@@ -3935,8 +3994,8 @@ FRESULT f_read (
 
 	for ( ;  btr;								/* Repeat until btr bytes read */
 		btr -= rcnt, *br += rcnt, rbuff += rcnt, fp->fptr += rcnt) {
-		if (fp->fptr % SS(fs) == 0) {			/* On the sector boundary? */
-			csect = (UINT)(fp->fptr / SS(fs) & (fs->csize - 1));	/* Sector offset in the cluster */
+		if ((fp->fptr modSS(fs)) == 0) {		/* On the sector boundary? */
+			csect = (UINT)((fp->fptr divSS(fs)) & (fs->csize - 1));	/* Sector offset in the cluster */
 			if (csect == 0) {					/* On the cluster boundary? */
 				if (fp->fptr == 0) {			/* On the top of the file? */
 					clst = fp->obj.sclust;		/* Follow cluster chain from the origin */
@@ -3957,7 +4016,7 @@ FRESULT f_read (
 			sect = clst2sect(fs, fp->clust);	/* Get current sector */
 			if (sect == 0) ABORT(fs, FR_INT_ERR);
 			sect += csect;
-			cc = btr / SS(fs);					/* When remaining bytes >= sector size, */
+			cc = btr divSS(fs);					/* When remaining bytes >= sector size, */
 			if (cc > 0) {						/* Read maximum contiguous sectors directly */
 				if (csect + cc > fs->csize) {	/* Clip at cluster boundary */
 					cc = fs->csize - csect;
@@ -4487,8 +4546,8 @@ FRESULT f_lseek (
 				fp->clust = clmt_clust(fp, ofs - 1);
 				dsc = clst2sect(fs, fp->clust);
 				if (dsc == 0) ABORT(fs, FR_INT_ERR);
-				dsc += (DWORD)((ofs - 1) / SS(fs)) & (fs->csize - 1);
-				if (fp->fptr % SS(fs) && dsc != fp->sect) {	/* Refill sector cache if needed */
+				dsc += (DWORD)((ofs - 1) divSS(fs)) & (fs->csize - 1);
+				if ((fp->fptr modSS(fs)) && dsc != fp->sect) {	/* Refill sector cache if needed */
 #if !FF_FS_TINY
 #if !FF_FS_READONLY
 					if (fp->flag & FA_DIRTY) {		/* Write-back dirty sector cache */
@@ -4557,18 +4616,20 @@ FRESULT f_lseek (
 					fp->clust = clst;
 				}
 				fp->fptr += ofs;
-				if (ofs % SS(fs)) {
+				if (ofs modSS(fs)) {
 					nsect = clst2sect(fs, clst);	/* Current sector */
 					if (nsect == 0) ABORT(fs, FR_INT_ERR);
-					nsect += (DWORD)(ofs / SS(fs));
+					nsect += (DWORD)(ofs divSS(fs));
 				}
 			}
 		}
+#if !FF_FS_READONLY
 		if (!FF_FS_READONLY && fp->fptr > fp->obj.objsize) {	/* Set file change flag if the file size is extended */
 			fp->obj.objsize = fp->fptr;
 			fp->flag |= FA_MODIFIED;
 		}
-		if (fp->fptr % SS(fs) && nsect != fp->sect) {	/* Fill sector cache if needed */
+#endif
+		if ((fp->fptr modSS(fs)) && nsect != fp->sect) {	/* Fill sector cache if needed */
 #if !FF_FS_TINY
 #if !FF_FS_READONLY
 			if (fp->flag & FA_DIRTY) {			/* Write-back dirty sector cache */
@@ -5666,8 +5727,8 @@ FRESULT f_forward (
 
 	for ( ;  btf && (*func)(0, 0);					/* Repeat until all data transferred or stream goes busy */
 		fp->fptr += rcnt, *bf += rcnt, btf -= rcnt) {
-		csect = (UINT)(fp->fptr / SS(fs) & (fs->csize - 1));	/* Sector offset in the cluster */
-		if (fp->fptr % SS(fs) == 0) {				/* On the sector boundary? */
+		csect = (UINT)((fp->fptr divSS(fs)) & (fs->csize - 1));	/* Sector offset in the cluster */
+		if ((fp->fptr modSS(fs)) == 0) {				/* On the sector boundary? */
 			if (csect == 0) {						/* On the cluster boundary? */
 				clst = (fp->fptr == 0) ?			/* On the top of the file? */
 					fp->obj.sclust : get_fat(&fp->obj, fp->clust);
@@ -5695,9 +5756,9 @@ FRESULT f_forward (
 		dbuf = fp->buf;
 #endif
 		fp->sect = sect;
-		rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes remains in the sector */
+		rcnt = SS(fs) - ((UINT)fp->fptr modSS(fs));	/* Number of bytes remains in the sector */
 		if (rcnt > btf) rcnt = btf;					/* Clip it by btr if needed */
-		rcnt = (*func)(dbuf + ((UINT)fp->fptr % SS(fs)), rcnt);	/* Forward the file data */
+		rcnt = (*func)(dbuf + ((UINT)fp->fptr modSS(fs)), rcnt);	/* Forward the file data */
 		if (rcnt == 0) ABORT(fs, FR_INT_ERR);
 	}
 

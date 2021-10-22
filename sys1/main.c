@@ -199,13 +199,15 @@ int getbtn(void)
   static char last;
   if (last != ch) {
     last = ch;
-    fcnt = frameCount + 12;
+    fcnt = frameCount + 16;
     if (ch != 255)
       return ch;
-  } else if (frameCount == fcnt) {
+  } else if (((frameCount - fcnt) & 0xfe) == 0) {
     /* Autorepeat up and down arrows */
-    if (last == 0xfb || last == 0xf7)
-      last = 0xff;
+    if (last == 0xfb || last == 0xf7) {
+      fcnt = frameCount + 8;
+      return last;
+    }
   }
   return -1;
 }

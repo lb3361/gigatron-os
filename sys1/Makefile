@@ -4,8 +4,8 @@ CFLAGS=-rom=dev
 LDFLAGS=-map=64k,./system.ovl
 PGMS=system.gt1
 
-OBJS=main.o diskio.o ff.o codepage.o bank.o console.o loader.o
-ASMS=spi.s bankasm.s loaderasm.s
+OBJS=main.o diskio.o ff.o bank.o console.o loader.o
+ASMS=spi.s bankasm.s loaderasm.s ffasm.s
 
 all: ${PGMS}
 
