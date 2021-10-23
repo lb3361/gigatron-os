@@ -18,7 +18,7 @@
 #define BLANK_WITH_MODE3 2
 
 
-#if _GLCC_VER < 103024
+#if _GLCC_VER < 103030
 # error This program requires a more recent version of GLCC.
 #endif
 
