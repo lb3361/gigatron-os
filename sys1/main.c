@@ -18,6 +18,31 @@
 #define BLANK_WITH_MODE3 2
 
 
+/** MEMORY USAGE
+***    0x200:  Start routine
+***    0x300:  Bank testing routines
+***    0x8000: Page zero mirror (used while loading GT1 that target page zero)
+***    0x8100: Junk page (data received from SPI while writing)
+***    0x8200: 0xFF page (data sent to SPI while reading)
+***    0x8300-0x84ff: Sector buffer for FS metadata
+***    0x8500-0x86ff: Sector buffer for reading GT1 files
+***    0x8700-0x87ff: Available
+***    0x8800-0xfbff: Code, data and heap
+***    0xfc00-0xffff: Stack only
+***
+*** MAP OVERLAY
+***                size    addr   step    end   flags
+*** segments = [ (0x7400, 0x8800, None,   None,   0),
+***              (0x00fa, 0x0200, None,   None,   7),
+***              (0x00fa, 0x0300, None,   None,   7) ]
+**/
+
+#define JUNK_PAGE  (void*)0x8100
+#define FF_PAGE    (void*)0x8200
+#define FS_BUFFER  (void*)0x8300
+#define FIL_BUFFER (void*)0x8500
+
+
 #if _GLCC_VER < 103030
 # error This program requires a more recent version of GLCC.
 #endif
@@ -320,8 +345,12 @@ int main()
     _memcpyext(0xc0 | (curbank>>2), (char*)0x8300u, (char*)0x8300u, 0x7d00u);
     SYS_ExpanderControl(ctrlBits_v5 | 0xc0);
   }
+
+  /* Initialize FF_PAGE */
+  memset(FF_PAGE,0xff,256);
   
   /* mount card and get toplevel directory */
+  fatfs.win = FS_BUFFER;
   res = f_mount(&fatfs, "", 1);
   if (res != FR_OK)
     _exitm(EXIT_FAILURE, "Mount failed");
@@ -357,7 +386,7 @@ int main()
 
   /* Go */
   freefiles();
-  if ((res = load_gt1(cbuf)) == FR_INT_ERR)
+  if ((res = load_gt1(cbuf, FIL_BUFFER)) == FR_INT_ERR)
     _exitm(EXIT_FAILURE, "Corrupted GT1");
   if (res != FR_OK)
     faterr(res);

@@ -14,7 +14,7 @@ extern void videoTopReset(void);
 extern void videoTopBlank(void);
 
 
-
+#if USE_C_LOAD_GT1_STREAM
 
 static BYTE *load_gt1_addr;
 static UINT load_gt1_len;
@@ -37,6 +37,16 @@ static UINT load_gt1_stream(register const BYTE *p, register UINT n)
   return n;
 }
 
+#else
+
+/* Implemented in loadasm.s */
+extern BYTE *load_gt1_addr;
+extern UINT load_gt1_len;
+extern UINT load_gt1_stream(register const BYTE *p, register UINT n);
+
+#endif
+
+
 static BYTE load_gt1_channelmask;
 
 static void prep(const char *buf)
@@ -44,8 +54,7 @@ static void prep(const char *buf)
   register int len;
   register int b0 = buf[0];
   register int b1 = buf[1];
-  if (!(len = buf[2]))
-    len = 256;
+  len = ((buf[2]-1) & 0xff) + 1;
   load_gt1_len = len;
   load_gt1_addr = (BYTE*)((b0 << 8) + b1);
   if (b0 - 4 <= 0 && b0 - 2 >= 0) {
@@ -61,7 +70,7 @@ static void prep(const char *buf)
 }
 
 
-FRESULT load_gt1(const char *s)
+FRESULT load_gt1(const char *s, void *buffer)
 {
   register FIL *fp = 0;
   register FRESULT res;
@@ -82,6 +91,7 @@ FRESULT load_gt1(const char *s)
 
   /* allocate buffer */
   fp = safe_malloc(sizeof(FIL));
+  fp->buf = buffer;
 
   /* open file */
   if ((res = f_open(fp, s, FA_READ)) != FR_OK)

@@ -2,7 +2,9 @@
 def scope():
 
     # these functions overwrite random bytes in page JUNKPAGE
-    JUNKPAGE = 0x82
+    JUNKPAGE = 0x81
+    FFPAGE = 0x82
+    FFPAGE_Init = False
     
     # void spi_send(const char *buffer, int len)
     # void spi_recv(char *buffer, int len)
@@ -51,15 +53,16 @@ def scope():
         LDW(R9);STW(R21)
         label('.recvloop')
         _CALLJ('.helper')
-        LDWI('SYS_SetMemory_v2_54');STW('sysFn')    # prep sys
-        # sysArgs[0]      Len
-        # sysArgs[1]      Val
-        # sysArgs[2,3]    Buff
-        LD(R20);ST('sysArgs0')
-        LDI(255);ST('sysArgs1')
-        LD(R8);ST('sysArgs2')
-        LDI(JUNKPAGE);ST('sysArgs3')
-        SYS(54)                                     # memset junk buffer with 0xff
+        if FFPAGE_Init:
+            LDWI('SYS_SetMemory_v2_54');STW('sysFn')    # prep sys
+            # sysArgs[0]      Len
+            # sysArgs[1]      Val
+            # sysArgs[2,3]    Buff
+            LD(R20);ST('sysArgs0')
+            LDI(255);ST('sysArgs1')
+            LD(R8);ST('sysArgs2')
+            LDI(JUNKPAGE);ST('sysArgs3')
+            SYS(54)
         _LDI('SYS_SpiExchangeBytes_v4_134');STW('sysFn')
         # sysArgs[0]      Page index start, for both send/receive (in, changed)
         # sysArgs[1]      Memory page for send data (in)
@@ -68,7 +71,7 @@ def scope():
         LDW(R8);STW('sysArgs0')
         ADDW(R20);STW(R8);ST('sysArgs2')
         LD('sysArgs1');ST('sysArgs3')
-        LDI(JUNKPAGE);ST('sysArgs1')
+        LDI(FFPAGE);ST('sysArgs1')
         SYS(134)
         _BRA('.recvloop')
 
