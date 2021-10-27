@@ -1,4 +1,5 @@
 SHELL=/bin/sh
+GIGAROM=../../gigatron-rom
 CC=glcc
 CFLAGS=-rom=dev
 LDFLAGS=-map=64k,./system.ovl
@@ -16,6 +17,10 @@ ${OBJS}: ff.h ffconf.h diskio.h
 
 system.gt1: ${OBJS} ${ASMS} system.ovl
 	${CC} ${CFLAGS} ${LDFLAGS} ${OBJS} ${ASMS} -o $@
+
+patch: system.gt1
+	cp ${PGMS} binaries/
+	cp ${GIGAROM}/dev.rom binaries
 
 
 FORCE:
