@@ -357,10 +357,11 @@ int main()
 
   /* search for autoexec.gt1 */
   dir();
-  for (i = 0; i != nfiles; i++)
-    if (! strcmp(files[i], "*autoexec.gt1"))
-      if (action(files[i]) == A_GT1) 
-        goto exec;
+  if (buttonState & buttonB)     /* Button B not pressed */
+    for (i = 0; i != nfiles; i++)
+      if (! strcmp(files[i], "*autoexec.gt1"))
+        if (action(files[i]) == A_GT1)
+          goto exec;
   
   /* otherwise, browse */
   cbuf[0] = 0;
