@@ -8,13 +8,12 @@ and execute file SYSTEM.GT1 on the SD card.
 
 Cardboot remains quite limited about what it can load.
 - It cannot load anything into page zero without crashing
-- It cannot load things into the visible screen buffer (it clears the screen!)
-- It cannot load things into the screen buffers hole above 0x72a0.
+- It cannot load anything into the visible screen buffer because it clears the screen before executing.
+- It cannot load anything into the screen buffers hole above 0x72a0.
 
-The solution to load such programs is to make CardBoot load the browser
-https://github.com/lb3361/gigatron-os/tree/master/sys1 which will autoload
-any program named 'autoexec.gt1' if it exists.
-
+The reliable solution to start an arbitrary program when the Gigatron boots
+is to make CardBoot load the [browser](../sys1) which then autoloads 
+any program named 'autoexec.gt1' without such restrictions.
 
 Although the main structure of the program is inherited from MarcelK's version,
 it is focused towards the boot objective intead of being a preparation for 
