@@ -1,21 +1,26 @@
 # Readonly browser and loader
 
-This version of 'SYSTEM.GT1' implements a file browser that can be used to navigate the 
+This code implements a file browser that can be used to navigate the 
 directories and execute any GT1 file present on a SD card attached to the RAM & I/O 
 expansion SPI0 port.  It supports FAT filesystems with long file names (up to 25 characters).
 
-### 1. Compilation
 
-Compile with GLCC (https://github.com/lb3361/gigatron-lcc) using the command 'make'.
-
-### 2. Operation
+### 1. Prerequisites
 
 Your gigatron must be equipped with a RAM and IO expansion card like the
 one described in https://github.com/lb3361/gigatron-lb/tree/main/extension-retro.
 Your gigatron must also be equipped with a recent version of the DEVROM such as
 the one provided in the 'binaries' directory. 
 
-* Format the SD card with a FAT32 filesystem (this is necessary for CardBoot)
+### 2. Compilation
+
+Compile with GLCC (https://github.com/lb3361/gigatron-lcc) using the command 'make'.
+This creates a program named system.gt1 that goes into the main directory of your FAT32 formatted SD card.
+For convenience, a precompiled binary is provided in the directory 'binaries'.
+
+### 2. Operation
+
+* Format the SD card with a FAT32 filesystem. How to do this depends on your operating system. Under Linux, you can use 'fdisk' to create a single partition of type 'c' then use 'mkdosfs -F 32 /dev/*sdCardCevice*'. Under Windows, investigate https://kb.sandisk.com/app/answers/detail/a_id/22476/~/formatting-sandisk-memory-card-products-in-fat32-format-using-third-party.
 * Copy 'system.gt1' into the root directory.
 * Add GT1 files of interest to the SD card, possibly in subdirectories
 * Insert the SD card in a SD breakout connected to port SPI0 of the RAM & IO expansion board.
@@ -29,8 +34,10 @@ if it is found. Hold button B when the program starts to prevent this from happe
 
 ### 3. Screenshots
 
-Oversized screenshots.
-
 ![Screenshot1](images/shot1.png)
 
 ![Screenshot2](images/shot2.png)
+
+![Screenshot3](images/shot3.png)
+
+![Screenshot4](images/shot4.png)
