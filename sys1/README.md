@@ -7,11 +7,11 @@ expansion SPI0 port.  It supports FAT filesystems with long file names (up to 25
 
 ### 1. Prerequisites
 
-Your gigatron must be equipped with a RAM and IO expansion card such
+Your Gigatron must be equipped with a RAM and IO expansion card such
 one described in https://github.com/lb3361/gigatron-lb/tree/main/extension-retro, such as
 Marcel's original design all the patches described in https://forum.gigatron.io/viewtopic.php?p=1192#p1192,
 or Hans61's combined memory expansion and video repeater described in https://forum.gigatron.io/viewtopic.php?p=2606#p2606.
-Your gigatron must also be equipped with a recent version of the DEVROM such as
+Your Gigatron must also be equipped with a recent version of the DEVROM such as
 the one provided in the 'binaries' directory. 
 
 ### 2. Compilation
