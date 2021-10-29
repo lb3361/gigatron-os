@@ -112,6 +112,29 @@ def scope():
                  ('EXPORT', 'load_gt1_len'),
                  ('CODE', 'load_gt1_stream', code1) ] )
 
+
+    # int _exec_rom(void *romptr)
+    # -- Execute rom program
+
+    def code2():
+        label("_exec_rom")
+        # copy trampoline
+        _BMOV('.trampoline', 0xf0, 8, 16)
+        # prepare syscalls
+        LDW(R8);STW('sysArgs0')
+        LDWI('SYS_ExpanderControl_v4_40');STW('sysFn')
+        # jump and never come back
+        LDI(0);ST(vSP)
+        _CALLJ(0x80)
+        label('.trampoline')
+        LDI(0x7c);SYS(40)                     # 2+2
+        LDI('SYS_Exec_88');STW('sysFn')       # 2+2
+        LDWI(0x200);STW(vLR);SYS(88)          # 3+2+2
+
+    module(name='romasm.s',
+           code=[('EXPORT', '_exec_rom'),
+                 ('CODE', '_exec_rom', code2)] )
+
 scope()
 
 # Local Variables:

@@ -1,9 +1,7 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-
-extern FRESULT load_gt1(const char *s, void *buffer);
-
-extern void _exec_pgm(void *ramaddr);
+extern int load_gt1_from_fs(const char *s, void *sectorbuffer);
+extern int load_gt1_from_rom(const char *name);
 
 #endif

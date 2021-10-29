@@ -1,17 +1,9 @@
-#include <stdlib.h>
-#include <string.h>
-#include <gigatron/console.h>
-#include <gigatron/libc.h>
-#include <gigatron/sys.h>
-
+#include "main.h"
 #include "ff.h"
 #include "loader.h"
 
-extern void faterr(FRESULT);
-extern void *safe_malloc(size_t);
-extern void *mainmenuptr;
-extern void videoTopReset(void);
-extern void videoTopBlank(void);
+extern void _exec_pgm(void*);
+extern void _exec_rom(void*);
 
 
 #if USE_C_LOAD_GT1_STREAM
@@ -32,8 +24,8 @@ static UINT load_gt1_stream(register const BYTE *p, register UINT n)
   } else {
     memcpy(addr, p, n);
   }
-  load_gt1_addr += n;
-  load_gt1_len -= n;
+  load_gt1_addr = addr = addr + n;
+  load_gt1_len = len = len - n;
   return n;
 }
 
@@ -49,30 +41,35 @@ extern UINT load_gt1_stream(register const BYTE *p, register UINT n);
 
 static BYTE load_gt1_channelmask;
 
-static void prep(const char *buf)
+static int prep(const char *buf)
 {
+  register BYTE *pcm;
   register int len;
   register int b0 = buf[0];
   register int b1 = buf[1];
-  len = ((buf[2]-1) & 0xff) + 1;
+  len = ((buf[2] - 1) & 0xff) + 1;
   load_gt1_len = len;
   load_gt1_addr = (BYTE*)((b0 << 8) + b1);
-  if (b0 - 4 <= 0 && b0 - 2 >= 0) {
-    if (b0 == 3)
-      mainmenuptr = 0;
-    if (b1 + len >= 0xfa) {
-      if (b1 == 2)
-        load_gt1_channelmask = 0;
-      else
-        load_gt1_channelmask &= 1;
-    }
-  }
+  /* illegal page crossing indicates a corrupted gt1 */
+  if ((b1 = b1 + len - 1) >> 8)
+    return 1;
+  /* check channel mask
+     writing 1fe-1ff, 2fe-2ff -> channelmask &= 0
+     writing 3fe-3ff, 4fe-4ff -> channelmask &= 1 */
+  if (((b1 + 2) & 0xfe) || ((b0 - 1) & 0xfc))
+    return 0;
+  pcm = &load_gt1_channelmask;
+  if (b0 - 2 >= 0)
+    *pcm &= 1;
+  else
+    *pcm = 0;
+  return 0;
 }
 
-
-FRESULT load_gt1(const char *s, void *buffer)
+int load_gt1_from_fs(const char *s, void *sectorbuffer)
 {
-  register FIL *fp = 0;
+  FIL fil;
+  register FIL *fp = &fil;
   register FRESULT res;
   register int segments = 0;
   UINT br;
@@ -81,22 +78,15 @@ FRESULT load_gt1(const char *s, void *buffer)
 
   /* blank screen for speed */
   videoTopBlank();
-  
   /* prepare zero page mirror */
   memcpy((void*)0x8030, (void*)0x0030, 0x100-0x30);
-
   /* prepare globals */
   load_gt1_channelmask = 0x3;
   channelMask_v4 &= 0xfc;
-
-  /* allocate buffer */
-  fp = safe_malloc(sizeof(FIL));
-  fp->buf = buffer;
-
   /* open file */
+  fp->buf = sectorbuffer;
   if ((res = f_open(fp, s, FA_READ)) != FR_OK)
     goto error;
-  
   /* parse */
   for(;;) {
     if ((res = f_read(fp, buf, 3, &br)) != FR_OK)
@@ -107,26 +97,36 @@ FRESULT load_gt1(const char *s, void *buffer)
     if (buf[0] == 0 && segments > 0)
       break;
     segments++;
-    prep(buf);
+    if (prep(buf))
+      goto error;
     if ((res = f_forward(fp, load_gt1_stream, load_gt1_len, &br)) != FR_OK)
       goto error;
     res = FR_INT_ERR;
     if (load_gt1_len != 0)
       goto error;
   }
-
+  /* test that we've reached EOF */
+  if ((res = f_read(fp, buf, 1, &br)) != FR_OK || br != 0)
+    goto error;
   /* execute */
   f_close(fp);
-  free(fp);
   channelMask_v4 |= load_gt1_channelmask;
   videoTopReset();
   _exec_pgm((void*)((buf[1] << 8) + buf[2]));
   return FR_OK;
-
   /* error */
  error:
   channelMask_v4 |= 0x3;
-  free(fp);
   return res;
 }
   
+
+int load_gt1_from_rom(register const char *name)
+{
+  char buf[8];
+  register void *p = 0;
+  while ((p = SYS_ReadRomDir(p, buf)))
+    if (! strncmp(buf, name, 8))
+      _exec_rom(p);
+  return -1;
+}

@@ -1,13 +1,7 @@
-#include <stdlib.h>
-#include <gigatron/console.h>
-#include <gigatron/libc.h>
-#include <gigatron/sys.h>
-#include <string.h>
-
+#include "main.h"
 #include "ff.h"
 #include "bank.h"
 #include "loader.h"
-
 
 /* Maximum number of files per directory */
 #define MAXFILES 64
@@ -51,6 +45,8 @@ char cbuf[256];
 int nfiles;
 char *files[MAXFILES];
 FATFS fatfs;
+jmp_buf jmpbuf;
+
 
 void videoTopReset(void)
 {
@@ -70,7 +66,7 @@ void videoTopBlank(void)
 #endif
 }
 
-void faterr(FRESULT res)
+void faterr(int res)
 {
   static char buf[16];
   char ibuf[8];
@@ -245,7 +241,7 @@ action_t browse(register int offset, register int selected)
   videoTopBlank();
 #if BLANK_WITH_VIDEOTOP
   dispdir(console_info.nlines -1);
-#else  
+#else
   console_clear_screen();
   dispdir(0);
 #endif
@@ -346,6 +342,9 @@ int main()
     SYS_ExpanderControl(ctrlBits_v5 | 0xc0);
   }
 
+  /* set restart buffer */
+  setjmp(jmpbuf);
+  
   /* Initialize FF_PAGE */
   memset(FF_PAGE,0xff,256);
   
@@ -357,21 +356,18 @@ int main()
 
   /* search for autoexec.gt1 */
   dir();
+  cbuf[0] = 0;
   if (buttonState & buttonB)     /* Button B not pressed */
     for (i = 0; i != nfiles; i++)
       if (! strcmp(files[i], "*autoexec.gt1"))
         if (action(files[i]) == A_GT1)
           goto exec;
-  
   /* otherwise, browse */
-  cbuf[0] = 0;
   for (;;)
     if (browse(-1, -1) == A_GT1)
       break;
 
  exec:
-  /* We're now committed to running a GT1 file */
-
   /* Prep screen */
   _console_reset(CONSOLE_DEFAULT_FGBG & 0xff);
   if ((s = strrchr(cbuf, '/')))
@@ -387,7 +383,7 @@ int main()
 
   /* Go */
   freefiles();
-  if ((res = load_gt1(cbuf, FIL_BUFFER)) == FR_INT_ERR)
+  if ((res = load_gt1_from_fs(cbuf, FIL_BUFFER)) == FR_INT_ERR)
     _exitm(EXIT_FAILURE, "Corrupted GT1");
   if (res != FR_OK)
     faterr(res);

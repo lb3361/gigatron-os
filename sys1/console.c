@@ -1,11 +1,5 @@
-#include <stdlib.h>
-#include <string.h>
-#include <gigatron/console.h>
-#include <gigatron/libc.h>
-#include <gigatron/sys.h>
-
-#include "bank.h"
-
+#include "main.h"
+#include "loader.h"
 
 /* 1) CONSOLE GEOMETRY
    Override console_info and _console_reset to change the console
@@ -43,9 +37,6 @@ void _console_reset(int fgbg)
    message on the first line and wait 1.5 seconds. Then try to call
    the main menu program from rom. */
 
-extern void *mainmenuptr = 0;
-extern void videoTopReset(void);
-
 static void exitm_msgfunc(int retcode, const char *s)
 {
   register char t;
@@ -62,12 +53,9 @@ static void exitm_msgfunc(int retcode, const char *s)
     while (frameCount != t) {
     }
   }
-  if (mainmenuptr) {
-    /* Then try to call main menu in ROM */
-    _console_reset(CONSOLE_DEFAULT_FGBG & 0xff);
-    _reset_ctrl_and_exec(mainmenuptr);  /* defined bankasm.s */
-  }
-  /* Otherwise return */
+  /* Then try to call main menu in ROM */
+  _console_reset(0x20);
+  load_gt1_from_rom("Main");
 }
 
 
@@ -84,13 +72,4 @@ void _console_setup(void)
   /* Set exit function */
   _exitm_msgfunc = exitm_msgfunc;
   _console_reset(CONSOLE_DEFAULT_FGBG);
-  /* search prgram 'Main' in ROM */
-  if (! mainmenuptr) {
-    void *p = 0;
-    char buf[8];
-    while ((p = SYS_ReadRomDir(p, buf)))
-      if (! strncmp(buf, "Main", 5))
-        break;
-    mainmenuptr = p;
-  }
 }

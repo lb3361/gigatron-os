@@ -9,6 +9,5 @@ extern int set_zbank(int);
 /* from bankasm.s */
 extern int _banktest(char *addr, char bitmask);
 extern int _change_zbank(void);
-extern void _reset_ctrl_and_exec(void *romptr);
 
 #endif
