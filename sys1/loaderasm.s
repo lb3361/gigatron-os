@@ -123,13 +123,13 @@ def scope():
     def code2():
         label("_exec_rom")
         # copy trampoline
-        _BMOV('.trampoline', 0xf0, 8, 16)
+        _BMOV('.trampoline', 0xf0, 16, 1)
         # prepare syscalls
         LDW(R8);STW('sysArgs0')
         LDWI('SYS_ExpanderControl_v4_40');STW('sysFn')
         # jump and never come back
         LDI(0);ST(vSP)
-        LDI(0x7c);CALLI(0x80)
+        LDI(0x7c);CALLI(0xf0)
         label('.trampoline')
         SYS(40)
         LDWI('SYS_Exec_88');STW('sysFn');

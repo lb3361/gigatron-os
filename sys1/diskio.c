@@ -6,6 +6,7 @@
 #include "diskio.h"		/* Declarations of disk functions */
 #include "spi.h"
 
+#include <string.h>
 #include <gigatron/sys.h>
 #include <gigatron/libc.h>
 #include <gigatron/console.h>
@@ -48,10 +49,9 @@
 
 static DSTATUS Stat = STA_NOINIT;	/* Disk status */
 static BYTE Drive = 0;
-
 static BYTE CardType;   /* b0:MMC, b1:SDv1, b2:SDv2, b3:Block addressing */
+static BYTE CID[16];
 
-static char cbuf[16];
 
 static int wait_ready (void)	/* 1:OK, 0:Timeout */
 {
@@ -163,11 +163,23 @@ static BYTE send_cmd(BYTE c, DWORD arg)
 	do {
 		spi_recv(&d, 1);
 	} while ((d & 0x80) && --n);
+	if (! n)            /* Mark as no longer initialized in case of timeout */
+		Stat = STA_NOINIT;
 #if CMDVERBOSE
 	if (c == CMD0 || c == CMD8 || c == CMD55) { n = d & 0xfe; } else { n = d; }
 	cprintf("%d %s\n", d, (n) ? "FAIL" : "OK");
 #endif
 	return d;			/* Return with the response value */
+}
+
+static BYTE read_cid(BYTE *buf16)
+{
+	BYTE d;
+	if ((d = send_cmd(CMD10, 0)))
+		return d;
+	if (!recv_datablock(buf16, 16))
+		return 0xff;
+	return 0;
 }
 
 
@@ -232,10 +244,11 @@ DSTATUS disk_initialize (BYTE drv)
 #if INITVERBOSE
 	cprintf("CardType=%d\n", ty);
 #endif
-	s = ty ? 0 : STA_NOINIT;
+	s = STA_NOINIT;
+	if (ty && !read_cid(CID))
+		s = 0;
 	Stat = s;
 	deselect();
-
 	return s;
 }
 
@@ -295,16 +308,26 @@ DRESULT disk_write (BYTE drv,          /* Physical drive nmuber to identify the 
 /* Miscellaneous Functions                                               */
 /*-----------------------------------------------------------------------*/
 
-#if !FF_FS_READONLY
-
 DRESULT disk_ioctl (BYTE pdrv,      /* Physical drive nmuber (0..) */
 					BYTE cmd,       /* Control code */
 					void *buff)	    /* Buffer to send/receive control data */
 {
+	if (disk_status(pdrv) & STA_NOINIT)
+		return RES_NOTRDY;
+	switch(cmd)
+		{
+		case DISK_CHANGED: {
+			BYTE ncid[16];
+			BYTE res = read_cid(ncid);
+			deselect();
+			if (res || memcmp(CID, ncid, 16))
+				return RES_ERROR;
+			return RES_OK;
+		}
+		}
 	return RES_PARERR;
 }
 
-#endif
 
 /* Local Variables: */
 /* mode: c */

@@ -2,6 +2,7 @@
 #include "ff.h"
 #include "bank.h"
 #include "loader.h"
+#include "diskio.h"
 
 /* Maximum number of files per directory */
 #define MAXFILES 64
@@ -71,8 +72,7 @@ void faterr(int res)
   char ibuf[8];
   strcpy(buf, "Fat error ");
   strcat(buf, itoa(res, ibuf, 10));
-  { char x = frameCount - 1; while (frameCount != x) ; }
-  _exitm(EXIT_FAILURE, buf);
+  maindialog(buf);
 }
 
 void *safe_malloc(size_t sz)
@@ -83,7 +83,40 @@ void *safe_malloc(size_t sz)
   return p;
 }
 
-void freefiles(void)
+static void prline(int fgbg, int y, const char *s)
+{
+  console_state.fgbg = fgbg;
+  console_state.cx = 0;
+  console_state.cy = y;
+  if (s)
+    console_print(s, 26);
+}
+
+static int getbtn(void)
+{
+  register char ch = buttonState;
+  static char fcnt;
+  static char last;
+  if (last != ch) {
+    last = ch;
+    fcnt = frameCount + 16;
+    if (ch != 255)
+      return ch;
+  } else if (((frameCount - fcnt) & 0xfe) == 0) {
+    /* Autorepeat up and down arrows */
+    if (last == 0xfb || last == 0xf7) {
+      fcnt = frameCount + 8;
+      return last;
+    }
+  }
+  return -1;
+}
+
+
+
+/* ------------ Directory reading ------------ */
+
+static void freefiles(void)
 {
   register int i;
   register char **f = files;
@@ -93,7 +126,7 @@ void freefiles(void)
   nfiles = 0;
 }
 
-void dir(void)
+static void dir(void)
 {
   register int l;
   register int k = 0;
@@ -107,8 +140,7 @@ void dir(void)
     freefiles();
   if ((res = f_opendir(&dir, cbuf)) != FR_OK)
     faterr(res);
-  if (cbuf[5])
-    fk = "...";
+  fk = "...";
   if (fk) {
     f[0] = safe_malloc(strlen(fk)+1);
     strcpy(f[0], fk);
@@ -135,16 +167,92 @@ void dir(void)
   nfiles = k;
 }
 
-void prline(int fgbg, int y, const char *s)
+
+/* ------------ SD0/SD1/ROM dialog ------------ */
+
+#define CY1 4
+#define CY2 6
+#define CX1 9
+#define CX2 17
+
+static void rect(int fg, int bg)
 {
-  console_state.fgbg = fgbg;
-  console_state.cx = 0;
-  console_state.cy = y;
-  if (s)
-    console_print(s, 26);
+  int i = console_info.offset[CY1] - 8;
+  int j = console_info.offset[CY2+1] + 8;
+  int k = CX1 * 6 - 4;
+  int l = (CX2 - CX1) * 6 + 18;
+  int c = fg;
+  while(1) {
+    char *addr = (char*)((videoTable[i])<<8) + k;
+    char *eaddr = addr + l;
+    if (i == j)
+      c = fg;
+    memset(addr, c, l);
+    addr[0] = addr[l] = fg;
+    c = bg;
+    if (i == j)
+      break;
+    i += 2;
+  }
 }
 
-void dispdir(int line)
+static void maindialog(const char *s)
+{
+  int i;
+  int fgbg;
+  int sel = 0;
+  static char *lines[] = { " SD0:/    ", " SD1:/    ", " ROM menu "  };
+  videoTopReset();
+  if (s) {
+    prline(0x0003, 0, s);
+    console_clear_to_eol();
+  }
+  for(;;) {
+  redisplay:
+    rect(0x3f, 0x15);
+    for (i = 0; i < 3; i++) {
+      console_state.fgbg = (i == sel) ? 0x003f : 0x3f15;
+      console_state.cy = CY1 + i;
+      console_state.cx = CX1;
+      console_print(lines[i], CX2-CX1+2);
+    }
+  btn:
+    switch(getbtn()) {
+    case '\n':
+    case buttonA ^ 0xff:
+    case buttonRight ^ 0xff:
+      if (sel == 2) {
+        _console_reset(0x20);
+        load_gt1_from_rom("Main");
+      } else
+        cbuf[2] = '0' + sel;
+    case 0x1b:
+    case buttonB ^ 0xff:
+    case buttonLeft ^ 0xff:
+      longjmp(jmpbuf, 1);
+    case buttonUp ^ 0xff:
+      if (sel > 0)
+        sel -= 1;
+      goto redisplay;
+    case buttonDown ^ 0xff:
+      if (sel < 2)
+        sel += 1;
+      goto redisplay;
+    }
+    goto btn;
+  }
+}
+
+#undef CY1
+#undef CY2
+#undef CX1
+#undef CX2
+
+
+/* ------------ Browsing ------------ */
+
+
+static void dispdir(int line)
 {
   register char *s = cbuf+5;
   register int l = strlen(s);
@@ -161,7 +269,7 @@ void dispdir(int line)
 
 typedef enum { A_NONE, A_DIR, A_PARENT, A_GT1 } action_t;
 
-action_t action(register const char *s)
+static action_t action(register const char *s)
 {
   register int t = 0;
   register int l = strlen(s);
@@ -195,7 +303,7 @@ action_t action(register const char *s)
   return 0;
 }
 
-void dispfile(register int i, register int sel, register const char *s)
+static void dispfile(register int i, register int sel, register const char *s)
 {
   register int color;
   if (s[0] == '-')
@@ -213,29 +321,9 @@ void dispfile(register int i, register int sel, register const char *s)
   console_state.fgbg = CONSOLE_DEFAULT_FGBG;
 }
 
-int getbtn(void)
+static action_t browse(register int offset, register int selected)
 {
-  register char ch = buttonState;
-  static char fcnt;
-  static char last;
-  if (last != ch) {
-    last = ch;
-    fcnt = frameCount + 16;
-    if (ch != 255)
-      return ch;
-  } else if (((frameCount - fcnt) & 0xfe) == 0) {
-    /* Autorepeat up and down arrows */
-    if (last == 0xfb || last == 0xf7) {
-      fcnt = frameCount + 8;
-      return last;
-    }
-  }
-  return -1;
-}
-
-action_t browse(register int offset, register int selected)
-{
-  register int n, fresh1, fresh2;
+  register int n, b, fresh1, fresh2;
 
  reload:
   videoTopBlank();
@@ -245,9 +333,7 @@ action_t browse(register int offset, register int selected)
   console_clear_screen();
   dispdir(0);
 #endif
-  if (offset < 0) /* Hack to avoid rereading the initial directory */
-    offset = selected =  0;
-  else
+  if (nfiles == 0)
     dir();
   fresh1 = 0;
   fresh2 = console_info.nlines - 1;
@@ -265,7 +351,11 @@ action_t browse(register int offset, register int selected)
         fresh1 = fresh2 = 0;
       }
       n = console_info.nlines - 1;
-      switch(getbtn())
+      b = getbtn();
+      if (!frameCount || !(b & 0x80))
+        if (disk_ioctl(cbuf[2]-'0', DISK_CHANGED, 0))
+          maindialog("Disk changed");
+      switch(b)
         {
         case 0x1b:
         case buttonB ^ 0xff:
@@ -281,11 +371,15 @@ action_t browse(register int offset, register int selected)
           if (nfiles - selected > 0)
             switch (action(files[selected])) {
             case A_DIR:
-              if (browse(0, 0) != A_GT1)
+              freefiles();
+              if (browse(0, 0) != A_GT1) {
+                freefiles();
                 goto reload;
+              }
             case A_GT1:
               return A_GT1;
             case A_PARENT:
+              freefiles();
               return A_PARENT;
             }
           break;
@@ -324,9 +418,10 @@ action_t browse(register int offset, register int selected)
 }
 
 
-int main()
+int main(void)
 {
   int i;
+  int autoexec;
   FRESULT res;
   const char *s;
 
@@ -343,9 +438,12 @@ int main()
   }
 
   /* set restart buffer */
+  autoexec = 1;
   if (! setjmp(jmpbuf))
     strcpy(cbuf,"SD0:/");
-  
+  else
+    autoexec = 0;
+
   /* Initialize FF_PAGE */
   memset(FF_PAGE,0xff,256);
   
@@ -353,19 +451,20 @@ int main()
   fatfs.win = FS_BUFFER;
   res = f_mount(&fatfs, cbuf, 1);
   if (res != FR_OK)
-    _exitm(EXIT_FAILURE, "Mount failed");
+    maindialog("Mount failed");
 
   /* search for autoexec.gt1 */
-  dir();
-  if (buttonState & buttonB)     /* Button B not pressed */
+  if (autoexec && (buttonState & buttonB)) {
+    dir();
     for (i = 0; i != nfiles; i++)
       if (! strcmp(files[i], "*autoexec.gt1"))
         if (action(files[i]) == A_GT1)
           goto exec;
+  }
+
   /* otherwise, browse */
-  for (;;)
-    if (browse(-1, -1) == A_GT1)
-      break;
+  if (browse(0, 0) != A_GT1)
+    maindialog(0);
 
  exec:
   /* Prep screen */

@@ -70,6 +70,10 @@ DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
 #define ATA_GET_MODEL		21	/* Get model name */
 #define ATA_GET_SN			22	/* Get serial number */
 
+/* Gigatron specific */
+#define DISK_CHANGED        80	/* Return nonzero if disk has changed */
+
+
 #ifdef __cplusplus
 }
 #endif

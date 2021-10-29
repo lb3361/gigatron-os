@@ -1,5 +1,5 @@
 #include "main.h"
-#include "loader.h"
+
 
 /* 1) CONSOLE GEOMETRY
    Override console_info and _console_reset to change the console
@@ -39,23 +39,13 @@ void _console_reset(int fgbg)
 
 static void exitm_msgfunc(int retcode, const char *s)
 {
-  register char t;
   videoTopReset();
-  if (s) {
-    /* Display message if any */
-    static struct console_state_s st = {3, 0, 0, 0, 0};
-    console_state = st;
-    console_state.fgbg = 0x0003;
-    console_print(s, console_info.ncolumns);
+  if (retcode && s) {
+    static struct console_state_s rst = { 0x0003, 0, 12, 1, 1 };
+    console_state = rst;
+    console_print(s, 26);
     console_clear_to_eol();
-    /* Wait some time while message is displayed */
-    t = frameCount + 90;
-    while (frameCount != t) {
-    }
   }
-  /* Then try to call main menu in ROM */
-  _console_reset(0x20);
-  load_gt1_from_rom("Main");
 }
 
 

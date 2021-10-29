@@ -35,5 +35,5 @@ dialog.o: dialog.c
 diskio.o: diskio.c ff.h ffconf.h diskio.h spi.h
 ff.o: ff.c ff.h ffconf.h diskio.h
 loader.o: loader.c main.h ff.h ffconf.h loader.h
-main.o: main.c main.h ff.h ffconf.h bank.h loader.h
+main.o: main.c main.h ff.h ffconf.h bank.h loader.h diskio.h
 

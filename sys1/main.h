@@ -8,11 +8,8 @@
 #include <gigatron/libc.h>
 #include <gigatron/sys.h>
 
-extern jmp_buf jmpbuf;
-
-extern void videoTopReset(void);
-extern void faterr(int);
 extern void videoTopReset(void);
 extern void videoTopBlank(void);
+extern void faterr(int);
 
 #endif
