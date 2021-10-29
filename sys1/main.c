@@ -47,7 +47,6 @@ char *files[MAXFILES];
 FATFS fatfs;
 jmp_buf jmpbuf;
 
-
 void videoTopReset(void)
 {
 #if BLANK_WITH_VIDEOTOP
@@ -108,7 +107,7 @@ void dir(void)
     freefiles();
   if ((res = f_opendir(&dir, cbuf)) != FR_OK)
     faterr(res);
-  if (cbuf[0])
+  if (cbuf[5])
     fk = "...";
   if (fk) {
     f[0] = safe_malloc(strlen(fk)+1);
@@ -147,9 +146,10 @@ void prline(int fgbg, int y, const char *s)
 
 void dispdir(int line)
 {
-  register char *s = cbuf;
+  register char *s = cbuf+5;
   register int l = strlen(s);
-  prline(CONSOLE_DEFAULT_FGBG, line, "SD0:/");
+  prline(CONSOLE_DEFAULT_FGBG, line, 0);
+  console_print(cbuf, 5);
   if (l < 21) {
     console_print(s, 21);
     console_clear_to_eol();
@@ -171,23 +171,23 @@ action_t action(register const char *s)
 
   if (s[0] == '.') {
     /* parent dir */
-    s = strrchr(cbuf, '/');
+    s = strrchr(cbuf + 5, '/');
     if (s)
       *(char*)s = 0;
     else
-      cbuf[0] = 0;
+      cbuf[5] = 0;
     return A_PARENT;
   }
   if (s[0] == '/') {
     /* this is a directory */
-    if (cbuf[0] == 0)
+    if (cbuf[5] == 0)
       s += 1;
     strcpy(cbuf + r, s);
     return A_DIR;
   }
   if (s[0] == '*') {
     /* this is a gt1 file */
-    if (cbuf[0])
+    if (cbuf[5])
       cbuf[r++] = '/';
     strcpy(cbuf + r, s + 1);
     return A_GT1;
@@ -343,20 +343,20 @@ int main()
   }
 
   /* set restart buffer */
-  setjmp(jmpbuf);
+  if (! setjmp(jmpbuf))
+    strcpy(cbuf,"SD0:/");
   
   /* Initialize FF_PAGE */
   memset(FF_PAGE,0xff,256);
   
   /* mount card and get toplevel directory */
   fatfs.win = FS_BUFFER;
-  res = f_mount(&fatfs, "", 1);
+  res = f_mount(&fatfs, cbuf, 1);
   if (res != FR_OK)
     _exitm(EXIT_FAILURE, "Mount failed");
 
   /* search for autoexec.gt1 */
   dir();
-  cbuf[0] = 0;
   if (buttonState & buttonB)     /* Button B not pressed */
     for (i = 0; i != nfiles; i++)
       if (! strcmp(files[i], "*autoexec.gt1"))

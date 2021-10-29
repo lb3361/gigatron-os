@@ -47,6 +47,7 @@
 #define CMD58	(58)		/* READ_OCR */
 
 static DSTATUS Stat = STA_NOINIT;	/* Disk status */
+static BYTE Drive = 0;
 
 static BYTE CardType;   /* b0:MMC, b1:SDv1, b2:SDv2, b3:Block addressing */
 
@@ -66,15 +67,19 @@ static int wait_ready (void)	/* 1:OK, 0:Timeout */
 
 static void deselect (void)
 {
-	BYTE ctrl = ctrlBits_v5 | 0x4;
+	BYTE ctrl = ctrlBits_v5 | 0xc;
 	SYS_ExpanderControl(ctrl);
 }
 
 static int select (void)	/* 1:OK, 0:Timeout */
 {
 	BYTE d;
-	BYTE ctrl = ctrlBits_v5 | 0x4;
-	SYS_ExpanderControl(ctrl ^ 0x4);
+	BYTE ctrl = ctrlBits_v5 | 0xc;
+	if (Drive == 0)
+		ctrl ^= 4;
+	else if (Drive == 1)
+		ctrl ^= 8;
+	SYS_ExpanderControl(ctrl);
 	spi_recv(&d, 1);
 	if (wait_ready())
 		return 1;	    /* Wait for card ready */
@@ -173,7 +178,7 @@ static BYTE send_cmd(BYTE c, DWORD arg)
 
 DSTATUS disk_status (BYTE drv)
 {
-	if (drv)
+	if (drv != Drive)
 		return RES_NOTRDY;
 	return Stat;
 }
@@ -189,8 +194,9 @@ DSTATUS disk_initialize (BYTE drv)
 	UINT tmr;
 	DSTATUS s;
 
-	if (drv)
+	if (drv != 0 && drv != 1)
 		return RES_NOTRDY;
+	Drive = drv;
 	
 	for (n = 10; n; n--)
 		spi_recv(buf, 1);	/* Apply 80 dummy clocks and the card gets ready to receive command */
