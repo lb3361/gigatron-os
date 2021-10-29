@@ -11,5 +11,6 @@
 extern void videoTopReset(void);
 extern void videoTopBlank(void);
 extern void faterr(int);
+extern void maindialog(const char*);
 
 #endif
