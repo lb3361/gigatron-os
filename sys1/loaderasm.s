@@ -14,7 +14,10 @@ def scope():
 
 
     # int _exec_pgm(void *ramptr)
-    # -- Copy page zero variables from 
+    # -- Execute program at address ramptr.
+    #    Execution happens after copying the zero page mirror into page zero
+    #    and resetting the ctrl bits to their default value. Consistent with
+    #    the Gigatron loader bug, both vLR and PC are set to ramptr-2.
 
     def code0():
         label('_exec_pgm')
@@ -42,7 +45,7 @@ def scope():
         LDWI('SYS_ExpanderControl_v4_40');STW('sysFn')
         LDI(0);ST(vSP)
         LDI(0x7c)
-        _CALLJ(0x00f8)
+        CALLI(0x00f8)
         HALT()
 
         # this is the trampoline at 0xf8
@@ -52,7 +55,10 @@ def scope():
         STW(vLR)           # Set vLR and vPC to ramptr-2
         DOKE('sysArgs0')   # See https://forum.gigatron.io/viewtopic.php?p=29#p29
 
-
+    module(name='exec_pgm.s',
+           code=[('EXPORT', '_exec_pgm'),
+                 ('CODE', '_exec_pgm', code0) ])
+        
     # BYTE *load_gt1_addr;
     # UINT load_gt1_len;
     # UINT load_gt1_stream(register const BYTE *p, register UINT n)
@@ -104,10 +110,8 @@ def scope():
         LDW(R11);SUBW(R9);DOKE(R22)
         LDW(R9);tryhop(2);POP();RET()
 
-    module(name='loaderasm.s',
-           code=[('EXPORT', '_exec_pgm'),
-                 ('CODE', '_exec_pgm', code0),
-                 ('EXPORT', 'load_gt1_stream'),
+    module(name='loadgt1stream.s',
+           code=[('EXPORT', 'load_gt1_stream'),
                  ('EXPORT', 'load_gt1_addr'),
                  ('EXPORT', 'load_gt1_len'),
                  ('CODE', 'load_gt1_stream', code1) ] )
@@ -125,11 +129,12 @@ def scope():
         LDWI('SYS_ExpanderControl_v4_40');STW('sysFn')
         # jump and never come back
         LDI(0);ST(vSP)
-        _CALLJ(0x80)
+        LDI(0x7c);CALLI(0x80)
         label('.trampoline')
-        LDI(0x7c);SYS(40)                     # 2+2
-        LDI('SYS_Exec_88');STW('sysFn')       # 2+2
-        LDWI(0x200);STW(vLR);SYS(88)          # 3+2+2
+        SYS(40)
+        LDWI('SYS_Exec_88');STW('sysFn');
+        LDWI(0x200);STW(vLR)
+        SYS(88)
 
     module(name='romasm.s',
            code=[('EXPORT', '_exec_rom'),
