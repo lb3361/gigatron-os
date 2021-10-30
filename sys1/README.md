@@ -10,13 +10,13 @@ expansion SPI0 port.  It supports FAT filesystems with long file names (up to 25
 Your Gigatron must be equipped with a RAM and IO expansion card such
 one described in https://github.com/lb3361/gigatron-lb/tree/main/extension-retro, such as
 Marcel's original design all the patches described in https://forum.gigatron.io/viewtopic.php?p=1192#p1192,
-or Hans61's combined memory expansion and video repeater described in https://forum.gigatron.io/viewtopic.php?p=2606#p2606.
+or such as Hans61's combined memory expansion and video repeater described in https://forum.gigatron.io/viewtopic.php?p=2606#p2606.
 Your Gigatron must also be equipped with a recent version of the DEVROM such as
 the one provided in the 'binaries' directory. 
 
 ### 2. Compilation
 
-Compile with GLCC (https://github.com/lb3361/gigatron-lcc) using the command 'make'.
+Compile with a recent version (>= 1.4) of GLCC (https://github.com/lb3361/gigatron-lcc) using the command 'make'. 
 This creates a program named system.gt1 that goes into the main directory of your FAT32 formatted SD card.
 For convenience, a precompiled binary is provided in the directory 'binaries'.
 
