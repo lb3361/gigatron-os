@@ -446,8 +446,10 @@ int main(void)
 
   /* Initialize FF_PAGE */
   memset(FF_PAGE,0xff,256);
-  
-  /* mount card and get toplevel directory */
+
+  /* mount card */
+  f_mount(0, "0:", 0);
+  f_mount(0, "0:", 0);
   fatfs.win = FS_BUFFER;
   res = f_mount(&fatfs, cbuf, 1);
   if (res != FR_OK)
