@@ -20,3 +20,5 @@ it is focused towards the boot objective intead of being a preparation for
 a generic OS.  That made it much easier to make some of the changes
 Marcel had envisioned such as buffering the sectors (for speed),
 and being more compliant with the SD and FAT specifications.
+
+Update: a version of this program is not integrated in the Gigatron DevRom.
