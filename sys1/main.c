@@ -225,6 +225,7 @@ void maindialog(const char *s)
         _console_reset(0x20);
         load_gt1_from_rom("Main");
       } else {
+        freefiles();
         strcpy(cbuf,"SDx:/");
         cbuf[2] = '0' + sel;
       }
