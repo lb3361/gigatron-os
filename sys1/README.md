@@ -22,7 +22,7 @@ For convenience, a precompiled binary is provided in the directory 'binaries'.
 
 ### 2. Operation
 
-* Format the SD card with a FAT32 filesystem. How to do this depends on your operating system. Under Linux, you can use 'fdisk' to create a single partition of type 'c' then use 'mkdosfs -F 32 /dev/*sdCardCevice*'. Under Windows, investigate https://kb.sandisk.com/app/answers/detail/a_id/22476/~/formatting-sandisk-memory-card-products-in-fat32-format-using-third-party.
+* Format the SD card with a FAT32 filesystem. How to do this depends on your operating system. Under Linux, you can use 'fdisk' to create a single partition of type 'c' then use 'mkdosfs -F 32 /dev/*sdCardCevice*'. Under Windows, investigate [this link](https://kb.sandisk.com/app/answers/detail/a_id/22476/~/formatting-sandisk-memory-card-products-in-fat32-format-using-third-party).
 * Copy 'system.gt1' into the root directory.
 * Add GT1 files of interest to the SD card, possibly in subdirectories
 * Insert the SD card in a SD breakout connected to port SPI0 of the RAM & IO expansion board.
