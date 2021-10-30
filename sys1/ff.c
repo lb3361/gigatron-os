@@ -40,8 +40,8 @@ static WORD _ff_wtoupper(WORD c) { if (c>='a' && c<='z') return c-0x20; return c
 # define ff_wtoupper(c)      _ff_wtoupper(c)
 # define ff_uni2oem(w,cp)    (((unsigned)w < 0x80) ? w : 0)
 # define ff_oem2uni(c,cp)    (c)
-# define ld_word(p)         _ld_word(p)
-# define ld_dword(p)        _ld_dword(p)
+/* # define ld_word(p)         _ld_word(p)  */
+/* # define ld_dword(p)        _ld_dword(p) */
 # define mem_cpy(d,s,c)     memcpy(d,s,c)
 # define mem_set(d,v,c)     memset(d,v,c)
 # define mem_cmp(d,s,c)     memcmp(d,s,c)
