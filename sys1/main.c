@@ -224,8 +224,10 @@ void maindialog(const char *s)
       if (sel == 2) {
         _console_reset(0x20);
         load_gt1_from_rom("Main");
-      } else
+      } else {
+        strcpy(cbuf,"SDx:/");
         cbuf[2] = '0' + sel;
+      }
     case 0x1b:
     case buttonB ^ 0xff:
     case buttonLeft ^ 0xff:
