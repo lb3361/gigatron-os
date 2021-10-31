@@ -54,15 +54,15 @@ static int prep(const char *buf)
   if ((b1 = b1 + len - 1) >> 8)
     return 1;
   /* check channel mask
-     writing 1fe-1ff, 2fe-2ff -> channelmask &= 0
-     writing 3fe-3ff, 4fe-4ff -> channelmask &= 1 */
+     writing 1fe-1ff, 2fe-2ff -> channelmask &= 0xfc
+     writing 3fe-3ff, 4fe-4ff -> channelmask &= 0xfe 
+     this is done *before* loading the data. */
   if (((b1 + 2) & 0xfe) || ((b0 - 1) & 0xfc))
     return 0;
-  pcm = &load_gt1_channelmask;
   if (b0 - 2 >= 0)
-    *pcm &= 1;
+    channelMask_v4 &= 0xfe;
   else
-    *pcm = 0;
+    channelMask_v4 &= 0xfc;
   return 0;
 }
 
@@ -80,14 +80,12 @@ int load_gt1_from_fs(const char *s, void *sectorbuffer)
   videoTopBlank();
   /* prepare zero page mirror */
   memcpy((void*)0x8030, (void*)0x0030, 0x100-0x30);
-  /* prepare globals */
-  load_gt1_channelmask = 0x3;
-  channelMask_v4 &= 0xfc;
   /* open file */
   fp->buf = sectorbuffer;
   if ((res = f_open(fp, s, FA_READ)) != FR_OK)
     goto error;
   /* parse */
+  channelMask_v4 |= 3;
   for(;;) {
     if ((res = f_read(fp, buf, 3, &br)) != FR_OK)
       goto error;
@@ -110,7 +108,6 @@ int load_gt1_from_fs(const char *s, void *sectorbuffer)
     goto error;
   /* execute */
   f_close(fp);
-  channelMask_v4 |= load_gt1_channelmask;
   videoTopReset();
   _exec_pgm((void*)((buf[1] << 8) + buf[2]));
   return FR_OK;

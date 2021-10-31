@@ -33,15 +33,10 @@
 # include <string.h>
 # include <ctype.h>
 
-extern WORD _ld_word(const BYTE *ptr);
-extern DWORD _ld_dword(const BYTE *ptr);
-static WORD _ff_wtoupper(WORD c) { if (c>='a' && c<='z') return c-0x20; return c; }
-
-# define ff_wtoupper(c)      _ff_wtoupper(c)
+# define ff_wtoupper(c)      (((c)>='a'&&(c)<='z')?((c)-0x20):(c))
 # define ff_uni2oem(w,cp)    (((unsigned)w < 0x80) ? w : 0)
 # define ff_oem2uni(c,cp)    (c)
-# define ld_word(p)         _ld_word(p)
-# define ld_dword(p)        _ld_dword(p)
+# define ld_word(p)         (*(WORD*)(p))   /* not always aligned but no page crossings */
 # define mem_cpy(d,s,c)     memcpy(d,s,c)
 # define mem_set(d,v,c)     memset(d,v,c)
 # define mem_cmp(d,s,c)     memcmp(d,s,c)
@@ -661,7 +656,6 @@ static WORD ld_word (const BYTE* ptr)	/*	 Load a 2-byte little-endian word */
 static DWORD ld_dword (const BYTE* ptr)	/* Load a 4-byte little-endian word */
 {
 	DWORD rv;
-
 	rv = ptr[3];
 	rv = rv << 8 | ptr[2];
 	rv = rv << 8 | ptr[1];
@@ -1972,9 +1966,10 @@ static int cmp_lfn (		/* 1:matched, 0:not matched */
 	for (wc = 1, s = 0; s < 13; s++) {		/* Process all characters in the entry */
 		uc = ld_word(dir + LfnOfs[s]);		/* Pick an LFN character */
 		if (wc != 0) {
-			if (i >= FF_MAX_LFN + 1 || ff_wtoupper(uc) != ff_wtoupper(lfnbuf[i++])) {	/* Compare it */
+			if (i >= FF_MAX_LFN + 1 || ff_wtoupper(uc) != ff_wtoupper(lfnbuf[i])) {	/* Compare it */
 				return 0;					/* Not matched */
 			}
+			i += 1;
 			wc = uc;
 		} else {
 			if (uc != 0xFFFF) return 0;		/* Check filler */
