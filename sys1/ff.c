@@ -34,7 +34,7 @@
 # include <ctype.h>
 
 # define ff_wtoupper(c)      (((c)>='a'&&(c)<='z')?((c)-0x20):(c))
-# define ff_uni2oem(w,cp)    (((unsigned)w < 0x80) ? w : 0)
+# define ff_uni2oem(w,cp)    (((unsigned)(w) < 0x80) ? (w) : 0)
 # define ff_oem2uni(c,cp)    (c)
 # define ld_word(p)         (*(WORD*)(p))   /* not always aligned but no page crossings */
 # define mem_cpy(d,s,c)     memcpy(d,s,c)
