@@ -83,13 +83,13 @@ void *safe_malloc(size_t sz)
   return p;
 }
 
-static void prline(int fgbg, int y, const char *s)
+static void prline(int fgbg, int y, const char *s, int l)
 {
   console_state.fgbg = fgbg;
   console_state.cx = 0;
   console_state.cy = y;
   if (s)
-    console_print(s, 26);
+    console_print(s, l);
 }
 
 static int getbtn(void)
@@ -204,7 +204,9 @@ void maindialog(const char *s)
   static char *lines[] = { " SD0:/    ", " SD1:/    ", " ROM menu "  };
   videoTopReset();
   if (s) {
-    prline(0x0003, 0, s);
+    prline(0x0003, 0, cbuf, 4);
+    console_print(" ", 1);
+    console_print(s, 24);
     console_clear_to_eol();
   }
   for(;;) {
@@ -259,7 +261,7 @@ static void dispdir(int line)
 {
   register char *s = cbuf+5;
   register int l = strlen(s);
-  prline(CONSOLE_DEFAULT_FGBG, line, 0);
+  prline(CONSOLE_DEFAULT_FGBG, line, 0, 26);
   console_print(cbuf, 5);
   if (l < 21) {
     console_print(s, 21);
@@ -317,7 +319,7 @@ static void dispfile(register int i, register int sel, register const char *s)
     color = 0x3c20;
   else
     color = 0x3f20;
-  prline(color, i + 1, s + 1);
+  prline(color, i + 1, s + 1, 26);
   if (s[0] == '/')
     console_print("/", 1);
   console_clear_to_eol();
@@ -479,9 +481,9 @@ int main(void)
   else
     s = cbuf;
 #if BLANK_WITH_VIDEOTOP
-  prline(CONSOLE_DEFAULT_FGBG, console_info.nlines-1, "\x82 ");
+  prline(CONSOLE_DEFAULT_FGBG, console_info.nlines-1, "\x82 ", 26);
 #else
-  prline(CONSOLE_DEFAULT_FGBG, 3, "\x82 ");
+  prline(CONSOLE_DEFAULT_FGBG, 3, "\x82 ", 26);
 #endif
   console_print(s, 24);
 
