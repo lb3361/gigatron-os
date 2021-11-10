@@ -454,7 +454,7 @@ int main(void)
 
   /* mount card */
   f_mount(0, "0:", 0);
-  f_mount(0, "0:", 0);
+  f_mount(0, "1:", 0);
   fatfs.win = FS_BUFFER;
   res = f_mount(&fatfs, cbuf, 1);
   if (res != FR_OK)

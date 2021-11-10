@@ -47,16 +47,16 @@
 #define CMD55	(55)		/* APP_CMD */
 #define CMD58	(58)		/* READ_OCR */
 
-static DSTATUS Stat = STA_NOINIT;	/* Disk status */
-static BYTE Drive = 0;
-static BYTE CardType;   /* b0:MMC, b1:SDv1, b2:SDv2, b3:Block addressing */
-static BYTE CID[16];
+static DSTATUS Stat[2] = { STA_NOINIT, STA_NOINIT };
+static BYTE CardType[2];  /* b0:MMC, b1:SDv1, b2:SDv2, b3:Block addressing */
+static BYTE CID[2][16];
+static BYTE Drive;
 
 
 static int wait_ready (void)	/* 1:OK, 0:Timeout */
 {
 	BYTE d;
-	UINT tmr;
+	register UINT tmr;
 	for (tmr = 5000; tmr; tmr--) {	/* Wait for ready in timeout of 500ms */
 		spi_recv(&d, 1);
 		if (d == 0xFF)
@@ -67,14 +67,14 @@ static int wait_ready (void)	/* 1:OK, 0:Timeout */
 
 static void deselect (void)
 {
-	BYTE ctrl = ctrlBits_v5 | 0xc;
+	register BYTE ctrl = ctrlBits_v5 | 0xc;
 	SYS_ExpanderControl(ctrl);
 }
 
 static int select (void)	/* 1:OK, 0:Timeout */
 {
 	BYTE d;
-	BYTE ctrl = ctrlBits_v5 | 0xc;
+	register BYTE ctrl = ctrlBits_v5 | 0xc;
 	if (Drive == 0)
 		ctrl ^= 4;
 	else if (Drive == 1)
@@ -83,7 +83,7 @@ static int select (void)	/* 1:OK, 0:Timeout */
 	spi_recv(&d, 1);
 	if (wait_ready())
 		return 1;	    /* Wait for card ready */
-	SYS_ExpanderControl(ctrl);
+	SYS_ExpanderControl(ctrl | 0xc);
 	return 0;			/* Failed */
 }
 
@@ -91,7 +91,7 @@ static
 int recv_datablock(BYTE *buff, 	UINT btr)
 {
 	BYTE d[2];
-	UINT tmr;
+	register UINT tmr;
 	for (tmr = 1000; tmr; tmr--) {	/* Wait for data packet in timeout of 100ms */
 		spi_recv(d, 1);
 		if (d[0] != 0xFF)
@@ -128,7 +128,8 @@ int xmit_datablock(BYTE *buff, BYTE token)
 
 static BYTE send_cmd(BYTE c, DWORD arg)
 {
-	BYTE n, d, buf[6];
+	register BYTE n;
+	BYTE d, buf[6];
 	
 	if (c & 0x80) {	/* ACMD<n> is the command sequense of CMD55-CMD<n> */
 		c &= 0x7F;
@@ -164,7 +165,7 @@ static BYTE send_cmd(BYTE c, DWORD arg)
 		spi_recv(&d, 1);
 	} while ((d & 0x80) && --n);
 	if (! n)            /* Mark as no longer initialized in case of timeout */
-		Stat = STA_NOINIT;
+		Stat[Drive] = STA_NOINIT;
 #if CMDVERBOSE
 	if (c == CMD0 || c == CMD8 || c == CMD55) { n = d & 0xfe; } else { n = d; }
 	cprintf("%d %s\n", d, (n) ? "FAIL" : "OK");
@@ -174,7 +175,7 @@ static BYTE send_cmd(BYTE c, DWORD arg)
 
 static BYTE read_cid(BYTE *buf16)
 {
-	BYTE d;
+	register BYTE d;
 	if ((d = send_cmd(CMD10, 0)))
 		return d;
 	if (!recv_datablock(buf16, 16))
@@ -190,9 +191,9 @@ static BYTE read_cid(BYTE *buf16)
 
 DSTATUS disk_status (BYTE drv)
 {
-	if (drv != Drive)
+	if (drv & 0xfe)
 		return RES_NOTRDY;
-	return Stat;
+	return Stat[drv];
 }
 
 
@@ -202,11 +203,12 @@ DSTATUS disk_status (BYTE drv)
 
 DSTATUS disk_initialize (BYTE drv)
 {
-	BYTE n, ty, c, buf[4];
-	UINT tmr;
-	DSTATUS s;
+	register BYTE n, ty, c;
+	register UINT tmr;
+	register DSTATUS s;
+	BYTE buf[4];
 
-	if (drv != 0 && drv != 1)
+	if (drv & 0xfe)
 		return RES_NOTRDY;
 	Drive = drv;
 	
@@ -240,14 +242,14 @@ DSTATUS disk_initialize (BYTE drv)
 				ty = 0;
 		}
 	}
-	CardType = ty;
+	CardType[drv] = ty;
 #if INITVERBOSE
 	cprintf("CardType=%d\n", ty);
 #endif
 	s = STA_NOINIT;
-	if (ty && !read_cid(CID))
+	if (ty && !read_cid(CID[drv]))
 		s = 0;
-	Stat = s;
+	Stat[drv] = s;
 	deselect();
 	return s;
 }
@@ -263,12 +265,16 @@ DRESULT disk_read (BYTE drv,       /* Physical drive nmuber to identify the driv
 				   LBA_t sector,    /* Start sector in LBA */
 				   UINT count)      /* Number of sectors to read */
 {
-	BYTE c;
-	DWORD sect = (DWORD)sector;
+	register BYTE c;
+	register DWORD sect = (DWORD)sector;
 	
-	if (disk_status(drv) & STA_NOINIT)
+	if (drv & 0xfe)
 		return RES_NOTRDY;
-	if (CardType < 4)
+	if (Stat[drv] & (STA_NOINIT|STA_NODISK))
+		return RES_NOTRDY;
+	Drive = drv;
+	
+	if (CardType[drv] < 4)
 		sect *= 512;	/* Convert LBA to byte address if needed */
 	c = (count > 1) ? CMD18 : CMD17;	/*  READ_MULTIPLE_BLOCK : READ_SINGLE_BLOCK */
 	if (send_cmd(c, sect) == 0) {
@@ -308,19 +314,23 @@ DRESULT disk_write (BYTE drv,          /* Physical drive nmuber to identify the 
 /* Miscellaneous Functions                                               */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_ioctl (BYTE pdrv,      /* Physical drive nmuber (0..) */
+DRESULT disk_ioctl (BYTE drv,       /* Physical drive nmuber (0..) */
 					BYTE cmd,       /* Control code */
 					void *buff)	    /* Buffer to send/receive control data */
 {
-	if (disk_status(pdrv) & STA_NOINIT)
+	if (drv & 0xfe)
 		return RES_NOTRDY;
+	if (Stat[drv] & (STA_NOINIT|STA_NODISK))
+		return RES_NOTRDY;
+	Drive = drv;
+
 	switch(cmd)
 		{
 		case DISK_CHANGED: {
 			BYTE ncid[16];
-			BYTE res = read_cid(ncid);
+			register BYTE res = read_cid(ncid);
 			deselect();
-			if (res || memcmp(CID, ncid, 16))
+			if (res || memcmp(CID[drv], ncid, 16))
 				return RES_ERROR;
 			return RES_OK;
 		}
