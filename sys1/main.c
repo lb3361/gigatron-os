@@ -446,8 +446,12 @@ int main(void)
   autoexec = 1;
   if (! setjmp(jmpbuf))
     strcpy(cbuf,"SD0:/");
-  else
+  else {
+    videoTopBlank();
+    console_state.fgbg = CONSOLE_DEFAULT_FGBG;
+    console_clear_screen();
     autoexec = 0;
+  }
 
   /* Initialize FF_PAGE */
   memset(FF_PAGE,0xff,256);
