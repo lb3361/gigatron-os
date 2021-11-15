@@ -13,6 +13,7 @@
 
 #define CMDVERBOSE 0
 #define INITVERBOSE 0
+#define MULTIPLE 0
 
 /*-----------------------------------------------------------------------*/
 /* Private                                                               */
@@ -111,7 +112,7 @@ int recv_datablock(register BYTE *buff, register UINT btr)
 #if ! FF_READONLY
 
 static
-int xmit_datablock(register BYTE *buff, register BYTE token)
+int xmit_datablock(register const BYTE *buff, register BYTE token)
 {
     BYTE d[2];
     if (!wait_ready())
@@ -293,7 +294,7 @@ DSTATUS disk_initialize (BYTE drv)
 /* Read Sector(s)                                                        */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_read (BYTE drv,       /* Physical drive nmuber to identify the drive */
+DRESULT disk_read (BYTE drv,        /* Physical drive nmuber to identify the drive */
                    BYTE *buff,      /* Data buffer to store read data */
                    LBA_t sector,    /* Start sector in LBA */
                    UINT count)      /* Number of sectors to read */
@@ -302,22 +303,29 @@ DRESULT disk_read (BYTE drv,       /* Physical drive nmuber to identify the driv
     register DWORD sect = (DWORD)sector;
     
     if (drv & 0xfe)
-        return RES_NOTRDY;
+        return RES_PARERR;
     if (Stat[drv] & (STA_NOINIT|STA_NODISK))
         return RES_NOTRDY;
     Drive = drv;
-    
     if (CardType[drv] < 4)
-        sect *= 512;    /* Convert LBA to byte address if needed */
-    c = (count > 1) ? CMD18 : CMD17;    /*  READ_MULTIPLE_BLOCK : READ_SINGLE_BLOCK */
-    if (send_cmd(c, sect) == 0) {
-        do {
-            if (! recv_datablock((BYTE*)buff, 512))
-                break;
-            buff += 512;
-        } while (--count);
-        if (c == CMD18)
-            (void)send_cmd12();          /* STOP_TRANSMISSION */
+        sect *= 512;                        /* Convert LBA to byte address if needed */
+    if (count == 1) {
+        if (send_cmd(CMD17, sect) == 0) {   /* Read block */
+            if (recv_datablock((BYTE*)buff, 512))
+                count = 0;
+        }
+    } else {
+#if ! MULTIPLE
+        return RES_PARERR;
+#else
+        if (send_cmd(CMD18, sect) == 0) {   /* Read multiple blocks */
+            while (count > 0 && recv_datablock((BYTE*)buff, 512)) {
+                buff += 512;
+                count -= 1;
+            }
+            (void) send_cmd12();            /* Stop transmission */
+        }
+#endif
     }
     deselect();
     return count ? RES_ERROR : RES_OK;
@@ -332,12 +340,41 @@ DRESULT disk_read (BYTE drv,       /* Physical drive nmuber to identify the driv
 #if !FF_FS_READONLY
 
 DRESULT disk_write (BYTE drv,          /* Physical drive nmuber to identify the drive */
-                    const BYTE *buff,   /* Data to be written */
-                    LBA_t sector,       /* Start sector in LBA */
-                    UINT count)         /* Number of sectors to write */
+                    const BYTE *buff,  /* Data to be written */
+                    LBA_t sector,      /* Start sector in LBA */
+                    UINT count)        /* Number of sectors to write */
 {
-    DRESULT res = RES_PARERR;
-    return res;
+    register DWORD sect = (DWORD)sector;
+
+    if (drv & 0xfe)
+        return RES_PARERR;
+    if (Stat[drv] & (STA_NOINIT|STA_NODISK))
+        return RES_NOTRDY;
+    Drive = drv;
+    if (CardType[drv] < 4)
+        sect *= 512;                      /* Convert LBA to byte address if needed */
+    if (count == 1) {
+        if (send_cmd(CMD24, sect) == 0)   /* Write single sector */
+            if (xmit_datablock(buff, 0xFE))
+                count = 0;
+    } else {
+#if ! MULTIPLE
+        return RES_PARERR;
+#else
+        if (CardType[drv] >= 2)
+            (void) send_cmd(ACMD23, count);      /* Announce erase count */
+        if (send_cmd(CMD25, sect) == 0) {        /* Write multiple sector */
+            while (count > 0 && xmit_datablock(buff, 0xfc)) {
+                buff += 512;
+                count -= 1;
+            }
+            if (! xmit_datablock(0, 0xfd))       /* Stop tran */
+                count = -1;
+        }
+#endif
+    }
+    deselect();
+    return count ? RES_ERROR : RES_OK;
 }
 
 #endif
