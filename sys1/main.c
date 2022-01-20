@@ -437,7 +437,6 @@ int main(void)
   } else {
     int curbank = ctrlBits_v5 & 0xc0;
     videoTopBlank();
-    set_zbank(0);
     _memcpyext(0xc0 | (curbank>>2), (char*)0x8800u, (char*)0x8800u, 0x7800u);
     SYS_ExpanderControl(ctrlBits_v5 | 0xc0);
   }

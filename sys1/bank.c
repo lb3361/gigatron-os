@@ -3,6 +3,11 @@
 
 #include "bank.h"
 
+#if _GLCC_VER < 104010
+# error This program requires a more recent version of GLCC.
+#endif
+
+
 int has_128k(void)
 {
   static int v = -1;
@@ -19,11 +24,3 @@ int has_zbank(void)
   return v;
 }
 
-int set_zbank(int ok)
-{
-  if (! has_zbank())
-    return -1;
-  if (!(ctrlBits_v5 & 0x20) != !!ok)
-    _change_zbank();
-  return !(ctrlBits_v5 & 0x20);
-}
