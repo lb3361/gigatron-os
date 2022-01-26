@@ -12,7 +12,7 @@ one described in https://github.com/lb3361/gigatron-lb/tree/main/extension-retro
 Marcel's original design all the patches described in https://forum.gigatron.io/viewtopic.php?p=1192#p1192,
 or such as Hans61's combined memory expansion and video repeater described in https://forum.gigatron.io/viewtopic.php?p=2606#p2606.
 Your Gigatron must also be equipped with a recent version of the DEVROM such as
-the one provided in the 'binaries' directory. 
+the one provided here in the 'binaries' directory. 
 
 ### 2. Compilation
 
@@ -31,7 +31,7 @@ For convenience, a precompiled binary is provided in the directory 'binaries'.
 Use the up and down arrows to select a file or a directory.
 To enter a directory or execute a GT1 file, use button A, the right arrow, or the enter key.
 To return to the parent directory, enter the '..' directory or use the left arrow.
-When the program starts, it searched for a file named 'autoexec.gt1' and executes it right away 
+When the program starts, it searches for a file named 'autoexec.gt1' and executes it right away 
 if it is found. Hold button B when the program starts to prevent this from happening.
 
 ### 3. Screenshots
