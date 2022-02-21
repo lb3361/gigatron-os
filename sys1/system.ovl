@@ -4,4 +4,20 @@ segments = [ (0x7400, 0x8800, None,   None,   0),   # main hi memory
              (0x00fa, 0x0200, None,   None,   7),   # ram check stub at location 0x200
              (0x00fa, 0x0300, None,   None,   7) ]  # expansion testing routine at location 0x300
 
+def map_modules(romtype):
+    def code0():
+        org(0x200)
+        label(args.gt1exec)
+        LDWI(initsp);STW(SP);
+        LD('romType');ANDI(0xfc);SUBI(0x40);BLE('.err')
+        LD('memSize');BNE('.err')
+        LDWI(v(args.e));CALL(vAC)
+        # Machine check fails
+        label('.err')
+        LDW('frameCount');STW(vLR);ANDI(0x7f);BEQ('.err')
+        LDW(vLR);DOKE(vPC+1);BRA('.err')
+    module(name='_gt1exec.s',
+           code=[ ('EXPORT', '_gt1exec'),
+                  ('CODE', '_gt1exec', code0) ] )
+    debug(f"synthetizing module '_gt1exec.s' at address 0x200")
 
