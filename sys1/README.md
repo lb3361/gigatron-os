@@ -22,7 +22,7 @@ For convenience, a precompiled binary is provided in the directory 'binaries'.
 
 ### 3. Operation
 
-* Get a blank SD card formatted with a FAT32 filesystem. The 4GB to 32GB cards come FAT3 formatted. like this. Otherwise you can format them under Linux: use 'fdisk' to create a single partition of type 'c', then use 'mkdosfs -F 32 /dev/*sdCardCevice*'. Alternatively, use [dosfs](https://github.com/lb3361/dosfs). Under Windows, investigate [this link](https://kb.sandisk.com/app/answers/detail/a_id/22476/~/formatting-sandisk-memory-card-products-in-fat32-format-using-third-party).
+* Get a blank SD card formatted with a FAT32 filesystem with 512 bytes per sector. Cards from 4GB to 32GB come formatted like this. Otherwise you need to reformat them. Note that the Windows Explorer formatter refuses to create FAT32 partitions of nonstandard sizes. You must use [other tools](https://kb.sandisk.com/app/answers/detail/a_id/22476/~/formatting-sandisk-memory-card-products-in-fat32-format-using-third-party).  Under Linuz, this can be achieved using the usual commands `fdisk` and `mkdosfs`, or using `dosformat` from the [dosfs utilities](https://github.com/lb3361/dosfs). For instance, if your SD card appears as device `/dev/sda`, you can use the command `dosformat -f /dev/sda -F FAT32`.
 * Copy 'system.gt1' into the root directory. Copying it first is better.
 * Add GT1 files of interest to the SD card, possibly in subdirectories
 * Insert the SD card in a SD breakout connected to port SPI0 of the RAM & IO expansion board.
