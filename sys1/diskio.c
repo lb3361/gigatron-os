@@ -131,12 +131,16 @@ int xmit_datablock(register const BYTE *buff, register BYTE token)
 
 #endif
 
+#if CMDVERBOSE
+static BYTE lastc;
+#endif
+
 static void cmdsend(register BYTE c, register DWORD arg)
 {
     BYTE buf[6];    
     register BYTE n;
 #if CMDVERBOSE
-    cprintf("CMD %d: ", c);
+    cprintf("CMD %d: ", lastc = c);
 #endif
     buf[0] = 0x40 | c;              /* Start + Command index */
     buf[1] = (BYTE)(arg >> 24);     /* Argument[31..24] */
@@ -159,7 +163,7 @@ static BYTE cmdreply(void)
     } while ((d & 0x80) && --n);
 #if CMDVERBOSE
     n = d;
-    if (c == CMD0 || c == CMD8 || c == CMD55)
+    if (lastc == CMD0 || lastc == CMD8 || lastc == CMD55)
         n &= 0xfe;
     cprintf("%d %s\n", d, (n) ? "FAIL" : "OK");
 #endif
