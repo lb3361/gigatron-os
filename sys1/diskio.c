@@ -178,8 +178,10 @@ static BYTE send_cmd0(void)
         select();
         spi_recv(&d, 1);        /* Stuff byte, CS low   */
         cmdsend(CMD0, 0);       /* CMD0 command, CS low */
-        if ((n = cmdreply()) == 1)
+        if ((n = cmdreply()) == 1) {
+            wait_ready();
             return n;
+        }
         if (frameCount >= 60)   /* No more than 1 second */
             return 0xff;
     }
@@ -204,6 +206,7 @@ static BYTE send_cmd(register BYTE c, register DWORD arg)
         n = cmdreply();
         if (n & 0xfe)
             return n;
+        wait_ready();
     }
     cmdsend(c, arg);
     n = cmdreply();
@@ -269,7 +272,7 @@ DSTATUS disk_initialize (BYTE drv)
             } else {
                 ty = 1; c = CMD1;   /* MMCv3 */
             }
-            for (tmr = 2000; tmr; tmr--)        /* Wait for leaving idle state */
+            for (tmr = 200; tmr; tmr--)             /* Wait for leaving idle state */
                 if (send_cmd(c, 0) == 0)
                     break;
             if (!tmr || send_cmd(CMD16, 512) != 0)  /* Set R/W block length to 512 */
