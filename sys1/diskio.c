@@ -380,6 +380,7 @@ DRESULT disk_write (BYTE drv,          /* Physical drive nmuber to identify the 
         }
 #endif
     }
+    wait_ready();
     deselect();
     return count ? RES_ERROR : RES_OK;
 }
