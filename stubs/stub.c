@@ -10,8 +10,6 @@
 #define _STR(s) #s
 #define STR(s) _STR(s)
 
-static const char *name = STR(NAME);
-
 int main(void)
 {
   char buf[8];
@@ -19,7 +17,7 @@ int main(void)
   register void *p = 0;
   
   while ((p = SYS_ReadRomDir(p, buf)))
-    if (! strncmp(buf, name, 8))
+    if (! strncmp(buf, STR(NAME), 8))
       SYS_Exec(p, (void*)0x200); /* found it */
 
   /* scroll one line */
