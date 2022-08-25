@@ -138,8 +138,8 @@ gcl0x
 
 File  `oscall.s` contains vCPU code with two entry points. 
 Entry point `OSCall` takes arguments in `sysArgs0-7` as explained above.
-Entry point `_oscall` takes up to three word arguments in R8-R10 like
-a regular GLCC routine and copies them into `sysArgs0-5` 
+Entry point `_oscall` takes up to four word arguments in R8-R11 like
+a regular GLCC routine and copies them into ` vAC` and `sysArgs[0-5]` 
 before jumping into `OSCall`.  This alternate entry point is used
 to define convenient C macros in file `oscall.h`.
 
