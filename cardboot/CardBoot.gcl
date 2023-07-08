@@ -973,34 +973,36 @@ ret]
 +-----------------------------------------------------------------------}
 *=$6aa0
 
-{ \PrintTwoDecimals }
-[def _PrintTwoDecimals=*
+{ \ScanDirectory }
+[def _ScanDirectory=*
+  {
+    Scan directory contents
+    Execute SYSTEM[X].GT1 if found
+    where [X] is the byte in vAC
+  }
   push
-  Number=
-  $30 k=                        {Do print leading zeroes}
-  10 \PrintDigit!                {Print tens}
-  Number $30+ \PrintChar!        {Print ones}
+  sysver=
+  [do
+    \LoadData!
+    Ptr p= peek if<>0           {Test for end of directory marker}
+    $e5^ [if<>0                 {Skip unused entries}
+      p $0b+ peek k=            {Fetch attributes}
+      $0f^ if<>0                {Skip long filename information}
+      2& if<>0                  {Skip hidden entries}
+      k 8& [if=0
+        sysver \IsSystemXGt1!    {Are we looking at SYSTEM[X].GT1?}
+        [if=0                    {File found}
+          208 pVideoTop.         {Blank many lines for speed}
+          \LoadGt1!              {Load file}
+          \Execute!              {Execute otherwise}
+        ]
+      ]
+    ]
+    32 \IncFilePos!              {Next slot}
+    loop]
+  \OpenMainDirectory!            {Reopen main directory to try again}
   pop ret
 ]
-
-{ \PrintDate -- reads p, writes i j k q Pos _sysFn _sysArgs[01245] }
-[def _PrintDate=*
-  push
-
-  \SYS_LSRW1_48 _sysFn=         {Prepare 1-bit right shift}
-  p 17+ peek                    {Select year, origin is 1980}
-  48!! 20- [if<0 100+]
-  \PrintTwoDecimals!
-
-  \SYS_LSRW5_50 _sysFn=         {Prepare 5-bit shift right}
-  p 16+ deek 50!! 15&           {Select month 1-12}
-  \PrintTwoDecimals!
-
-  p 16+ peek 31&                {Select day 1-31}
-  \PrintTwoDecimals!
-
-  pop ret
-] 
 
 {-----------------------------------------------------------------------+
 |} >_vLR++ [ret] {      RAM page $6b                                    |
@@ -1013,10 +1015,9 @@ ret]
     Format directory entry as "YYMMDD <size> FILENAME.EXT"
   }
   push
-  \PrintDate!                    {YYMMDD}
-  4 Pos+ Pos=                   {Small space}
+  4 Pos+ Pos=                    {Small space}
   \PrintSize!                    {File size or directory indicator}
-  4 Pos+ Pos=                   {Small space}
+  4 Pos+ Pos=                    {Small space}
   \PrintName!                    {FILENAME.EXT}
   \Newline!                      {End of line}
   pop ret
@@ -1137,9 +1138,11 @@ ret]
 [def _PrintDirectory=*
   {
     Print directory contents
-    Execute SYSTEM.GT1 if found
+    Execute SYSTEM[X].GT1 if found
+    where [X] is the byte in vAC
   }
   push
+  sysver=
   [do
     \LoadData!
     Ptr p= peek if<>0           {Test for end of directory marker}
@@ -1151,7 +1154,7 @@ ret]
         \PrintVolumeLabel!       {Print label}
       else
         \PrintDirEntry!          {Print entry}
-        \IsBootGt1!              {Are we looking for this file?}
+        sysver \IsSystemXGt1!    {Are we looking at SYSTEM7.GT1?}
         [if=0                    {File found}
           208 pVideoTop.         {Blank many lines for speed}
           \LoadGt1!              {Load file}
@@ -1305,14 +1308,17 @@ ret]
 +-----------------------------------------------------------------------}
 *=$74a0
 
-{ \IsBootGt1 }
-[def _IsBootGt1=*
+{ \IsSystemXGt1 }
+[def _IsSystemXGt1=*
   {
-    Check if directrory entry p is SYSTEM.GT1
+    Check if directrory entry p is SYSTEM[X].GT1
+    where [X] is the character in vAC.
     Returns 0 when name matches, non-zero otherwise
   }
+  i=                            {Save version char}
   [def `SYSTEM``GT1 #0] q=      {String to match}
-  p i=
+  6+ j= i j.                    {Fix version char 6}
+  p i=                          {Compare}
   [do
     q, <q++ if<>0 j=            {Compare until nul terminator}
     i, <i++ j^ if=0loop]        {Loop while equal}
@@ -1474,7 +1480,7 @@ ret]
     clen- [if>0 0] clen+ \IncFilePos!
     Ptr \sysArgs2:
     caddr \sysArgs0: i+ caddr=
-    \SYS_CopyMemory_DEVROM_80 \sysFn:
+    \SYS_CopyMemory_v6_80 \sysFn:
     i 80!!
     clen i- clen=
     if>0loop]
@@ -1536,11 +1542,12 @@ ret]
 [if=0 
   \InitFat32!
   \OpenMainDirectory!            {Read root directory XXX Move into PrintDir}
-  \PrintDirectory!               {List directory, find SYSTEM.GT1 and execute it}
+  $37 \ScanDirectory!            {Find SYSTEM7.GT1 and execute it, otherwise reopen and}
+  $20 \PrintDirectory!           {Find SYSTEM.GT1 and execute it}
 ]
 32 pVideoTop.                    {Not found!}
 \Newline!
-[def `SYSTEM.GT1`not`found! #0 ] \PrintText!
+[def `SYSTEM7.GT1`not`found! #0 ] \PrintText!
 ##\HALT                          {Halt if not found}
 
 
@@ -1558,7 +1565,7 @@ _FFPage=$7c
 _SectorBuffer=$7d00             {512 bytes}
 _ClusterList=$7f00              {Room for 256/4 = 64 clusters = 32KB}
 
-_SYS_CopyMemory_DEVROM_80=$e9
+_SYS_CopyMemory_v6_80=$e9
 
 {-----------------------------------------------------------------------+
 |                                                                       |

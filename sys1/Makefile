@@ -2,27 +2,29 @@ SHELL=/bin/sh
 ROM=v6
 GIGAROM=../../gigatron-rom
 CC=glcc
-CFLAGS=-rom=${ROM}
+CFLAGS=
 LDFLAGS=-map=64k,./system.ovl
-PGMS=system.gt1
 
-OBJS=main.o diskio.o ff.o bank.o console.o loader.o
+PGMS=system7.gt1 system.gt1
+
+SRCS=main.c diskio.c ff.c bank.c console.c loader.c
 ASMS=spi.s bankasm.s loaderasm.s
 
 all: ${PGMS}
 
 clean: FORCE
-	-rm ${PGMS} ${OBJS} 2>/dev/null
+	-rm ${PGMS} 2>/dev/null
 
-${OBJS}: ff.h ffconf.h diskio.h
+${PGMS}: ff.h ffconf.h diskio.h
 
-system.gt1: ${OBJS} ${ASMS} system.ovl
-	${CC} ${CFLAGS} ${LDFLAGS} ${OBJS} ${ASMS} -o $@
+system7.gt1: ${SRCS} ${ASMS} system.ovl
+	${CC} -rom=dev7 ${CFLAGS} ${LDFLAGS} ${SRCS} ${ASMS} -o $@
 	cp $@ binaries/
 
-patch: system.gt1
-	cp ${PGMS} binaries/
-	cp ${GIGAROM}/dev.rom binaries
+system.gt1: ${SRCS} ${ASMS} system.ovl
+	${CC} -rom=v6-- ${CFLAGS} ${LDFLAGS} ${SRCS} ${ASMS} -o $@
+	cp $@ binaries/
+
 
 FORCE:
 
