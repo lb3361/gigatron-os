@@ -38,7 +38,7 @@
 #define FIL_BUFFER (void*)0x8500
 
 
-#if _GLCC_VER < 103030
+#if _GLCC_VER < 105041
 # error This program requires a more recent version of GLCC.
 #endif
 

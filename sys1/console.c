@@ -41,8 +41,9 @@ static void exitm_msgfunc(int retcode, const char *s)
 {
   videoTopReset();
   if (retcode && s) {
-    static struct console_state_s rst = { 0x0003, 0, 12, 1, 1 };
-    console_state = rst;
+    console_state.fgbg = 3;
+    console_state_set_cycx(12);
+    console_state_set_wrap(0x101);
     console_print(s, 26);
     console_clear_to_eol();
   }
@@ -56,10 +57,7 @@ static void exitm_msgfunc(int retcode, const char *s)
 
 void _console_setup(void)
 {
-  /* Set initial state */
-  static struct console_state_s rst = {CONSOLE_DEFAULT_FGBG, 0, 0, 0, 0};
-  console_state = rst;
-  /* Set exit function */
+  console_state_set_wrap(0);
   _exitm_msgfunc = exitm_msgfunc;
   _console_reset(CONSOLE_DEFAULT_FGBG);
 }
