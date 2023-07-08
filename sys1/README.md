@@ -1,7 +1,7 @@
 # Readonly browser and loader
 
-This code implements a file browser that can be used to navigate the 
-directories and execute any GT1 file present on a SD card attached to the RAM & I/O 
+This code implements a file browser that can be used to navigate the
+directories and execute any GT1 file present on a SD card attached to the RAM & I/O
 expansion SPI0 port.  It supports FAT filesystems with long file names (up to 25 characters).
 
 
@@ -10,15 +10,16 @@ expansion SPI0 port.  It supports FAT filesystems with long file names (up to 25
 Your Gigatron must be equipped with a RAM and IO expansion card such
 one described in https://github.com/lb3361/gigatron-lb/tree/main/extension-retro, such as
 Marcel's original design all the patches described in https://forum.gigatron.io/viewtopic.php?p=1192#p1192,
-or such as Hans61's combined memory expansion and video repeater described in https://forum.gigatron.io/viewtopic.php?p=2606#p2606.
+or such as Hans61's combined memory expansion and video
+repeater described in https://forum.gigatron.io/viewtopic.php?p=2606#p2606.
 Your Gigatron must also be equipped with a recent version of the DEVROM such as
-the one provided here in the 'binaries' directory. 
+the one provided here in the 'binaries' directory.
 
 ### 2. Compilation
 
-Compile with a recent version (>= 1.4) of GLCC (https://github.com/lb3361/gigatron-lcc) using the command 'make'. 
-This creates a program named system.gt1 that goes into the main directory of your FAT32 formatted SD card.
-For convenience, a precompiled binary is provided in the directory 'binaries'.
+Compile with a recent version (>= 2.1) of GLCC (https://github.com/lb3361/gigatron-lcc) using the command 'make'.
+This creates programs named `system7.gt1` and `system.gt1` that go into the main directory
+of your FAT32 formatted SD card. For convenience, precompiled binaries are provided in the directory 'binaries'.
 
 ### 3. Operation
 
@@ -31,7 +32,7 @@ For convenience, a precompiled binary is provided in the directory 'binaries'.
 Use the up and down arrows to select a file or a directory.
 To enter a directory or execute a GT1 file, use button A, the right arrow, or the enter key.
 To return to the parent directory, enter the '..' directory or use the left arrow.
-When the program starts, it searches for a file named 'autoexec.gt1' and executes it right away 
+When the program starts, it searches for a file named 'autoexec.gt1' and executes it right away
 if it is found. Hold button B when the program starts to prevent this from happening.
 
 ### 4. Screenshots
