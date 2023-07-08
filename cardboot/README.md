@@ -21,4 +21,14 @@ a generic OS.  That made it much easier to make some of the changes
 Marcel had envisioned such as buffering the sectors (for speed),
 and being more compliant with the SD and FAT specifications.
 
-Update: a version of this program is not integrated in the Gigatron DevRom.
+Update: a version of this program is now integrated in the Gigatron DevRom, ROMv6, DEV7ROM..
+
+Update:
+- Version `CardBoot_v2.gt1` is for DEV6ROM or ROMv6. It searches and loads `system.gt1`.
+- Version `CardBoot.gt1` is for DEV7ROM. It first reads `system7.gt1` then falls back to `system.gt1`. 
+  It only prints the file list during the fallback search but without date to save code space for
+  the new search strategy.
+n
+
+
+

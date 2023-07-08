@@ -2,19 +2,15 @@ SHELL=/bin/sh
 GIGAROM=../../gigatron-rom
 COMPILEGCL=${GIGAROM}/Core/compilegcl.py
 
-PGMS=CardBoot.gt1
+PGMS=CardBoot.gt1 CardBoot_v2.gt1
 
 all:${PGMS}
 
-CardBoot.gt1: CardBoot.gcl
-	${COMPILEGCL} -s ${GIGAROM}/interface.json CardBoot.gcl
+%.gt1: %.gcl
+	${COMPILEGCL} -s ${GIGAROM}/interface.json $<
 
 clean: FORCE
-	-rm 2>/dev/null CardBoot.gt1
-
-patch: ${PGMS}
-	cp CardBoot.gcl CardBoot.gt1 ${GIGAROM}/Apps/CardBoot/
-
+	-rm 2>/dev/null ${PGMS}
 
 FORCE:
 
