@@ -9,6 +9,12 @@ zpage_reserve(range(0x30, 0x7f), 'CARDBOOT', error_on_conflict=False)
 
 ## GT1EXEC
 def map_modules(romtype):
+    ### pretend to be a regular rom (not a devrom)
+    ### to ensure that this file will keep working
+    ### once a suitable rom is released.
+    if romtype and romtype >= 0x80:
+        romtype = 0x48 
+    
     def code0():
         org(0x200)
         label(args.gt1exec)
