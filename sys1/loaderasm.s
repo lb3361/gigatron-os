@@ -23,14 +23,8 @@ def scope():
         label('_exec_pgm')
         PUSH()
 
-        # insert trampoline and vLR into page 0 mirror
-        _BMOV('.trampoline', 0x80f8, 8, 1)
-
-        # insert desired vLR and vPC into page 0 mirror
-        LDWI(0x8000+vPC);STW(R9)
-        LDWI(0x8000+vPC+1);STW(R10)
-        LD(R8+1);POKE(R10)
-        LD(R8);SUBI(2);POKE(R9)
+        # insert desired vLR/vPC into page 0 stack
+        LDWI(0x80fe);STW(R9);LDW(R8);DOKE(R9)
         
         # copy user variables from page 0 mirror to actual page 0
         # starting from this point we cannot use registers anymore
@@ -39,21 +33,12 @@ def scope():
         LDWI(0x8030);STW('sysArgs2')
         LDI(0x100-0x30);SYS(cm_cycs)
 
-        # set sysArgs0, sysFn, vSP, vLR, and call the trampoline
-        LDI(vPC);STW('sysArgs0') 
-        LDWI(0x8000+vPC);DEEK();STW('sysArgs4')
+        # Prepare trampoline, init stack, jump
+        LDWI(0xfab4);STW('sysArgs4')
+        LDWI(0xff63);STW('sysArgs6')
         LDWI('SYS_ExpanderControl_v4_40');STW('sysFn')
-        LDI(0);ST(vSP)
-        LDI(0x7c)
-        CALLI(0x00f8)
-        HALT()
-
-        # this is the trampoline at 0xf8
-        label('.trampoline')
-        SYS(40)
-        LDW('sysArgs4')
-        STW(vLR)           # Set vLR and vPC to ramptr-2
-        DOKE('sysArgs0')   # See https://forum.gigatron.io/viewtopic.php?p=29#p29
+        LDI(0xfe);STW(vSP)
+        LDI(0x7c);CALLI('sysArgs4')
 
     module(name='exec_pgm.s',
            code=[('EXPORT', '_exec_pgm'),
@@ -123,12 +108,12 @@ def scope():
     def code2():
         label("_exec_rom")
         # copy trampoline
-        _BMOV('.trampoline', 0xf0, 16, 1)
+        _MOVM('.trampoline', 0xf0, 16, 1)
         # prepare syscalls
         LDW(R8);STW('sysArgs0')
         LDWI('SYS_ExpanderControl_v4_40');STW('sysFn')
         # jump and never come back
-        LDI(0);ST(vSP)
+        LDI(0);STW(vSP)
         LDI(0x7c);CALLI(0xf0)
         label('.trampoline')
         SYS(40)

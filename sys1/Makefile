@@ -1,7 +1,8 @@
 SHELL=/bin/sh
+ROM=v6
 GIGAROM=../../gigatron-rom
 CC=glcc
-CFLAGS=-rom=dev
+CFLAGS=-rom=${ROM}
 LDFLAGS=-map=64k,./system.ovl
 PGMS=system.gt1
 

@@ -13,7 +13,10 @@ def map_modules(romtype):
         org(0x200)
         label(args.gt1exec)
         LDWI(initsp);STW(SP);
-        LD('romType');ANDI(0xfc);SUBI(0x40);BLE('.err')
+        if romtype and romtype >= 0x80:
+            LD('romType');ANDI(0xfc);XORI(romtype);BNE('.err')
+        elif romtype:
+            LD('romType');ANDI(0xfc);SUBI(romtype);BLT('.err')
         LD('memSize');BNE('.err')
         LDWI(v(args.e));CALL(vAC)
         # Machine check fails
@@ -25,3 +28,8 @@ def map_modules(romtype):
                   ('CODE', '_gt1exec', code0) ] )
     debug(f"synthetizing module '_gt1exec.s' at address 0x200")
 
+
+# Local Variables:
+# mode: python
+# indent-tabs-mode: ()
+# End:
