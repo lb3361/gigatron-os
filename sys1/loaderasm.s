@@ -16,8 +16,7 @@ def scope():
     # int _exec_pgm(void *ramptr)
     # -- Execute program at address ramptr.
     #    Execution happens after copying the zero page mirror into page zero
-    #    and resetting the ctrl bits to their default value. Consistent with
-    #    the Gigatron loader bug, both vLR and PC are set to ramptr-2.
+    #    and resetting the ctrl bits to their default value. 
 
     def code0():
         label('_exec_pgm')
