@@ -23,7 +23,11 @@ def scope():
         PUSH()
 
         # insert desired vLR/vPC into page 0 stack
-        LDWI(0x80fe);STW(R9);LDW(R8);DOKE(R9)
+        LDWI(0x80fe);STW(R9);
+        LDW(R8);_BNE('.dokepc')
+        LDI('sysArgs7')
+        label('.dokepc')
+        DOKE(R9)
         
         # copy user variables from page 0 mirror to actual page 0
         # starting from this point we cannot use registers anymore
