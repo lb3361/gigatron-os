@@ -262,6 +262,7 @@ static void dispdir(int line)
   register char *s = cbuf+5;
   register int l = strlen(s);
   prline(CONSOLE_DEFAULT_FGBG, line, 0, 26);
+  console_state.fgbg = 0x0f20;
   console_print(cbuf, 5);
   if (l < 21) {
     console_print(s, 21);
@@ -270,6 +271,7 @@ static void dispdir(int line)
     console_print("...", 3);
     console_print(s + l - 18, 18);
   }
+  console_state.fgbg = CONSOLE_DEFAULT_FGBG;
 }
 
 typedef enum { A_NONE, A_DIR, A_PARENT, A_GT1 } action_t;
