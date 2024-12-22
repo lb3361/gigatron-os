@@ -12,6 +12,10 @@
 /* Blank with mode 3 */
 #define BLANK_WITH_MODE3 2
 
+/* How to deal with hidden files */
+#define HIDE_HIDFILES 1
+#define HIDE_DOTFILES 0
+
 
 /** MEMORY USAGE
 ***    0x200:  Start routine
@@ -153,6 +157,14 @@ static void dir(void)
       faterr(res);
     if (! (l = strlen(info.fname)))
       break;
+#if HIDE_DOTFILES
+    if (info.fname[0] == '.')
+      continue;
+#endif
+#if HIDE_HIDFILES
+    if (info.fattrib & AM_HID)
+      continue;
+#endif
     f[k] = fk = safe_malloc(l + 2);
     *fk = '-';
     strcpy(fk + 1, info.fname);
