@@ -27,8 +27,4 @@ Update:
 - Version `CardBoot_v2.gt1` is for DEV6ROM or ROMv6. It searches and loads `system.gt1`.
 - Version `CardBoot.gt1` is for DEV7ROM. It first reads `system7.gt1` then falls back to `system.gt1`. 
   It only prints the file list during the fallback search but without date to save code space for
-  the new search strategy.
-n
-
-
-
+  the new search strategy. This is becoming obsolete as DEV7ROM has system7.gt1 in ROM.

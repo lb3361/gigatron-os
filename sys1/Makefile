@@ -19,7 +19,6 @@ ${PGMS}: ff.h ffconf.h diskio.h
 
 system7.gt1: ${SRCS} ${ASMS} system.ovl
 	${CC} -rom=dev7 ${CFLAGS} ${LDFLAGS} ${SRCS} ${ASMS} -o $@
-	cp $@ binaries/
 
 system.gt1: ${SRCS} ${ASMS} system.ovl
 	${CC} -rom=v6-- ${CFLAGS} ${LDFLAGS} ${SRCS} ${ASMS} -o $@
