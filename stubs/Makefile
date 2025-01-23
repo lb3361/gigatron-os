@@ -1,6 +1,6 @@
 SHELL=/bin/sh
 GLCC=glcc
-CFLAGS=-map=32k,./stub.ovl --no-runtime-bss-initialization
+CFLAGS=-rom=v5a -map=32k,bare -lc
 
 STUBS= SDCard.gt1 Loader.gt1 Snake.gt1 Racer.gt1 Mandelbrot.gt1		\
        Pictures.gt1 Credits.gt1 Tetronis.gt1 Bricks.gt1 TinyBASIC.gt1	\
