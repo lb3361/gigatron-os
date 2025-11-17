@@ -11,9 +11,15 @@
 #include <gigatron/libc.h>
 #include <gigatron/console.h>
 
-#define CMDVERBOSE 0
-#define INITVERBOSE 0
-#define MULTIPLE 0
+#ifndef CMDVERBOSE
+# define CMDVERBOSE 0
+#endif
+#ifndef INITVERBOSE
+# define INITVERBOSE 0
+#endif
+#ifndef MULTIPLE
+# define MULTIPLE 0
+#endif
 
 /*-----------------------------------------------------------------------*/
 /* Private                                                               */

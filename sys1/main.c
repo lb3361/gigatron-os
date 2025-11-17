@@ -8,13 +8,21 @@
 #define MAXFILES 64
 
 /* Blank using videotop */
-#define BLANK_WITH_VIDEOTOP 1
+#ifndef BLANK_WITH_VIDEOTOP
+# define BLANK_WITH_VIDEOTOP 1
+#endif
 /* Blank with mode 3 */
-#define BLANK_WITH_MODE3 2
+#ifndef BLANK_WITH_MODE3
+# define BLANK_WITH_MODE3 2
+#endif
 
 /* How to deal with hidden files */
-#define HIDE_HIDFILES 1
-#define HIDE_DOTFILES 0
+#ifndef HIDE_HIDFILES
+# define HIDE_HIDFILES 1
+#endif
+#ifndef HIDE_DOTFILES
+# define HIDE_DOTFILES 0
+#endif
 
 
 /** MEMORY USAGE
