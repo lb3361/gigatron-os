@@ -20,7 +20,7 @@ gcl0x
   \SYS_ExpanderControl_v4_40 _sysFn= $fc 40!!  { select bank 3            }
   [ $5447 _vLR= $8000 deek _vLR^ if=0          { test $8000 for "GT"      }
     $534f _vLR= $8002 deek _vLR^ if=0          { test $8002 for "OS"      }
-    $8004! %2=                                 { call $8004 save result   }
+    %2 $8004! %2=                              { call $8004 save result   }
    else
     -256 %2= ]                                 { else error code -256     }
   %0 40!! %2 4++                               { restore ctrlBits, result }

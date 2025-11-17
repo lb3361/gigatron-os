@@ -33,7 +33,7 @@ def scope():
         LD(0xfc);SYS(40)
         LDWI(0x5447);STW(vLR);LDWI(0x8000);DEEK();XORW(vLR);_BNE('.abrt') # GT
         LDWI(0x534f);STW(vLR);LDWI(0x8002);DEEK();XORW(vLR);_BEQ('.abrt') # OS
-        CALLI(0x8004);STLW(2) # must leave SYS_ExpanderControl in sysFn
+        LDLW(2);CALLI(0x8004);STLW(2) # must leave SYS_ExpanderControl in sysFn
         label('.ret')
         LDLW(0);SYS(40);
         LDLW(2);ALLOC(4);POP();RET()
